@@ -10,9 +10,6 @@ using static SkyCoop.DataStr;
 using static SkyCoop.ExpeditionBuilder;
 using System.Net.Sockets;
 using static SkyCoop.ExpeditionManager;
-using UnityEngine.SceneManagement;
-using static Utils;
-using Harmony;
 #if (DEDICATED)
 using System.Numerics;
 using TinyJSON;

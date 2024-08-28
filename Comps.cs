@@ -43,6 +43,8 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<LocalVariablesKit>();
             ClassInjector.RegisterTypeInIl2Cpp<ParticleSystemParasite>();
             ClassInjector.RegisterTypeInIl2Cpp<ExpeditionInteractive>();
+            ClassInjector.RegisterTypeInIl2Cpp<SpecialItemDummy>();
+            ClassInjector.RegisterTypeInIl2Cpp<StatusBarHelper>();
         }
         
         
@@ -52,6 +54,13 @@ namespace SkyCoop
 
             public string m_LocalizedDisplayName;
             public int m_SearchKey = 0;
+            public DataStr.ExtraDataForDroppedGear m_Extra = new DataStr.ExtraDataForDroppedGear();
+        }
+        public class SpecialItemDummy : MonoBehaviour
+        {
+            public SpecialItemDummy(IntPtr ptr) : base(ptr) { }
+
+            public string m_LocalizedDisplayName;
             public DataStr.ExtraDataForDroppedGear m_Extra = new DataStr.ExtraDataForDroppedGear();
         }
         public class IgnoreDropOverride : MonoBehaviour
@@ -3163,6 +3172,27 @@ namespace SkyCoop
                 }
             }
         }
+        public class StatusBarHelper : MonoBehaviour
+        {
+            public StatusBarHelper(IntPtr ptr) : base(ptr) { }
+            public GameObject m_RootTrack = null;
+            public GameObject m_Root = null;
+            void Update()
+            {
+                if (m_RootTrack != null)
+                {
+                    if (m_Root != null)
+                    {
+                        m_Root.SetActive(m_RootTrack.activeSelf);
+                    }
+                }
+                if(SanityManager.m_CanSeeSanity == false)
+                {
+                    m_Root.SetActive(false);
+                }
+            }
+        }
+        
         public class ExpeditionInteractive : MonoBehaviour
         {
             public ExpeditionInteractive(IntPtr ptr) : base(ptr) { }

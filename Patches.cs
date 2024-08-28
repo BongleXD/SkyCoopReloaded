@@ -13,6 +13,7 @@ using static SkyCoop.Comps;
 using static Utils;
 using static SkyCoop.MyMod;
 using AK;
+using UnityEngine.SceneManagement;
 
 namespace SkyCoop
 {
@@ -946,6 +947,11 @@ namespace SkyCoop
                         ShooterID = __instance.gameObject.GetComponent<Comps.ClientProjectile>().m_ClientID;
                     }
 
+                    if (MyBullet)
+                    {
+                        SanityManager.AddSanity(-10f);
+                    }
+
                     float RandomRotate = 0;
                     float RandomForce = 0;
                     Vector3 RandomTorque = new Vector3(0, 0, 0);
@@ -1507,26 +1513,41 @@ namespace SkyCoop
                         __instance.m_LocalizedDisplayName.m_LocalizationID = __instance.m_ObjectGuid.m_Guid.Split('_')[0];
                     }
                 }
-                if (ExpeditionManager.IsClueGear(__instance.m_GearName))
+                if (__instance.name == "GEAR_SCSanityBook")
                 {
-                    if (__instance.m_NarrativeCollectibleItem == null)
+                    if (__instance.m_ObjectGuid == null)
                     {
-                        NarrativeCollectibleItem N = __instance.gameObject.AddComponent<NarrativeCollectibleItem>();
-                        N.m_HudMessageOnPickup = new LocalizedString();
-                        N.m_HudMessageOnPickup.m_LocalizationID = "Youn found [50C878]special item[-] use it to start advanced expedition via handheld radio.";
-                        N.m_JournalEntryNumber = -1;
-                        N.m_ShowDuringInspect = true;
-                        __instance.m_NarrativeCollectibleItem = N;
+                        __instance.m_ObjectGuid = __instance.gameObject.AddComponent<ObjectGuid>();
+                        __instance.m_ObjectGuid.Set(ObjectGuidManager.GenerateNewGuidString());
                     }
-
-                    if(__instance.m_GearName == "GEAR_SCHopeless")
+                    if(__instance.m_ResearchItem == null) 
                     {
-                        __instance.m_NarrativeCollectibleItem.m_NarrativeTextLocID = "I found out that a civilian plane crashed on Timberwolf Mountain, you can rummage around there yourself. I won't go to this godforsaken hole teeming with wolves.";
-                    }else if (__instance.m_GearName == "GEAR_SCHopeless")
-                    {
-
+                        __instance.m_ResearchItem = __instance.gameObject.AddComponent<ResearchItem>();
+                        __instance.m_ResearchItem.m_SkillType = SkillType.None;
+                        __instance.m_ResearchItem.m_TimeRequirementHours = 15;
+                        __instance.m_ResearchItem.m_ReadAudio = "Play_ResearchBook";
                     }
                 }
+                //if (ExpeditionManager.IsClueGear(__instance.m_GearName))
+                //{
+                //    if (__instance.m_NarrativeCollectibleItem == null)
+                //    {
+                //        NarrativeCollectibleItem N = __instance.gameObject.AddComponent<NarrativeCollectibleItem>();
+                //        N.m_HudMessageOnPickup = new LocalizedString();
+                //        N.m_HudMessageOnPickup.m_LocalizationID = "Youn found [50C878]special item[-] use it to start advanced expedition via handheld radio.";
+                //        N.m_JournalEntryNumber = -1;
+                //        N.m_ShowDuringInspect = true;
+                //        __instance.m_NarrativeCollectibleItem = N;
+                //    }
+
+                //    if(__instance.m_GearName == "GEAR_SCHopeless")
+                //    {
+                //        __instance.m_NarrativeCollectibleItem.m_NarrativeTextLocID = "I found out that a civilian plane crashed on Timberwolf Mountain, you can rummage around there yourself. I won't go to this godforsaken hole teeming with wolves.";
+                //    }else if (__instance.m_GearName == "GEAR_SCHopeless")
+                //    {
+
+                //    }
+                //}
             }
         }
 
@@ -2316,6 +2337,7 @@ namespace SkyCoop
                 }
                 baseAi.SetupDamageForAnim(collisionPoint, GameManager.GetPlayerTransform().position, component);
                 baseAi.ApplyDamage(damage, !stickIn ? 0.0f : bleedOutMinutes, DamageSource.Player, collider);
+                SanityManager.AddSanity(-20f);
 
                 if (__instance.m_EmbeddedDepth > 0.0)
                 {
@@ -2920,6 +2942,17 @@ namespace SkyCoop
 
             SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_fixedS", data);
         }
+        public static void SaveSanity(SaveSlotType gameMode, string name)
+        {
+            float[] saveProxy = { SanityManager.m_CurrentSanity };
+            string data = JSON.Dump(saveProxy);
+
+            bool[] saveProxy2 = { SanityManager.m_CanSeeSanity };
+            string data2 = JSON.Dump(saveProxy2);
+
+            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_sanity", data);
+            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_sanitybook", data2);
+        }
         public static void SaveFixedSpawnPosition(SaveSlotType gameMode, string name)
         {
             Vector3[] saveProxy = { MyMod.SavedPositionForSpawn };
@@ -2975,6 +3008,7 @@ namespace SkyCoop
                 SaveDeathCreates(gameMode, name);
                 SaveCustomSkills(gameMode, name);
                 SaveUGUID(gameMode, name);
+                SaveSanity(gameMode, name);
             }
         }
 
@@ -3179,6 +3213,22 @@ namespace SkyCoop
             }
         }
 
+        public static void LoadSanity(string name)
+        {
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_sanity");
+            if (data != null)
+            {
+                float[] saveProxy = JSON.Load(data).Make<float[]>();
+                SanityManager.m_CurrentSanity = saveProxy[0];
+            }
+            string data2 = SaveGameSlots.LoadDataFromSlot(name, "skycoop_sanitybook");
+            if (data2 != null)
+            {
+                bool[] saveProxy = JSON.Load(data).Make<bool[]>();
+                SanityManager.m_CanSeeSanity = saveProxy[0];
+            }
+        }
+
         public static void clearFolder(string FolderName)
         {
             System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(FolderName);
@@ -3216,6 +3266,7 @@ namespace SkyCoop
                 LoadFixedSpawnPosition(name);
                 LoadReadedBooks(name);
                 LoadCustomSkills(name);
+                LoadSanity(name);
                 float FQ = LoadRadioFQ(name);
                 MyMod.RadioFrequency = Mathf.Round(FQ * 10.0f) * 0.1f;
                 LoadDeathCreates(name);
@@ -4137,6 +4188,12 @@ namespace SkyCoop
                         {
                             string ColorPrefix = "[87DBF5]";
                             string ColorAffix = "[-]";
+
+                            if(DGD.m_Extra.m_Variant == -2)
+                            {
+                                ColorPrefix = "[50C878]";
+                            }
+
                             __result = ColorPrefix + DGD.m_LocalizedDisplayName + ColorAffix;
                         } else
                         {
@@ -4502,6 +4559,11 @@ namespace SkyCoop
                             MyMod.UseFakeBed(obj);
                             __result = true;
                         }
+                    }else if(obj.GetComponent<SpecialItemDummy>() != null)
+                    {
+                        MelonLogger.Msg("Trying interact with special item dummy");
+                        MyMod.PickupSpecialItem(obj, obj.GetComponent<SpecialItemDummy>().m_Extra.m_PhotoGUID);
+                        __result = true;
                     }
                     else if(obj.GetComponent<Comps.AnimalCorpseObject>() != null && obj.name.Contains("Rabbit"))
                     {
@@ -5549,6 +5611,36 @@ namespace SkyCoop
                     MelonLogger.Msg("Dummy bed removed");
                     UnityEngine.Object.Destroy(FakeBedRoll);
                 }
+                SanityManager.ProcessedSleep(__instance.m_NumSecondsSleeping / 360);
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Rest), "BeginSleeping", new System.Type[] { typeof(Bed), typeof(int), typeof(int) })] // Once
+        public class Rest_BeginSleeping
+        {
+            public static void Postfix(Rest __instance, Bed b, int durationHours, int maxHours)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                SanityManager.StartSleeping();
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Rest), "BeginSleeping", new System.Type[] { typeof(Bed), typeof(int), typeof(int), typeof(float), typeof(Rest.PassTimeOptions), typeof(Il2CppSystem.Action) })] // Once
+        public class Rest_BeginSleeping2
+        {
+            public static void Postfix(Rest __instance, Bed b, int durationHours, int maxHours, float fadeOutDuration, Rest.PassTimeOptions options, Il2CppSystem.Action onSleepEnd)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                SanityManager.StartSleeping();
             }
         }
 
@@ -5756,6 +5848,8 @@ namespace SkyCoop
                 MyMod.DoPleaseWait("Please wait...", "Downloading scene drops...");
                 RequestDropsForScene();
             }
+
+            ExpeditionManager.MaySpawnSpeicalExpeditionItem(0, MyMod.level_guid);
         }
 
 
@@ -6896,6 +6990,12 @@ namespace SkyCoop
                     __instance.TeleportPlayer(MyMod.OverridedPositionForSpawn, GameManager.GetPlayerTransform().rotation);
                     MelonLogger.Msg(ConsoleColor.Magenta, "[TeleportPlayerAfterSceneLoad] X " + MyMod.OverridedPositionForSpawn.x+" Y "+ MyMod.OverridedPositionForSpawn.y+" Z "+ MyMod.OverridedPositionForSpawn.z);
                     MyMod.OverridedPositionForSpawn = Vector3.zero;
+                }
+                if (!string.IsNullOrEmpty(SanityManager.m_TransitionDataBackup))
+                {
+                    GameManager.m_SceneTransitionData = Utils.DeserializeObject<SceneTransitionData>(SanityManager.m_TransitionDataBackup);
+                    SanityManager.m_TransitionDataBackup = "";
+                    GameManager.ForceSaveGame();
                 }
             }
         }
@@ -8361,44 +8461,6 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Container), "PopulateContents")]
-        internal static class Container_PopulateContents
-        {
-            private static void Postfix(Container __instance)
-            {
-                string Gear = GetClueGear();
-                if (!string.IsNullOrEmpty(Gear))
-                {
-                    string PrefabName = Gear;
-                    int NarativeID = -1;
-                    if (PrefabName.Contains('#'))
-                    {
-                        string[] Slices = PrefabName.Split('#');
-                        PrefabName = Slices[0];
-                        NarativeID = int.Parse(Slices[1]);
-                    }
-                    
-                    GameObject reference = GetGearItemObject(PrefabName);
-
-                    if(reference == null) 
-                    {
-                        return;
-                    }
-                    GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, __instance.gameObject.transform);
-                    newGear.name = reference.name;
-                    GearItem Gi = newGear.GetComponent<GearItem>();
-                    __instance.AddGear(Gi);
-                    newGear.transform.parent = __instance.gameObject.transform;
-                    Gi.ManualStart();
-                    if(Gi.m_NarrativeCollectibleItem != null)
-                    {
-                        Gi.m_NarrativeCollectibleItem.m_JournalEntryNumber = NarativeID;
-                    }
-                    newGear.SetActive(false);
-                    MelonLogger.Msg("Special Gear "+ Gear+" spawned in "+__instance.gameObject.name);
-                }
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(InputManager), "GetOpenActionsPanelHeldDown")]
         internal static class InputManager_GetOpenActionsPanelHeldDown
         {
@@ -8916,8 +8978,161 @@ namespace SkyCoop
                 }
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(WildlifeItem), "StartKillAnimation")]
+        private static class WildlifeItem_StartKillAnimation
+        {
+            private static void Postfix(WildlifeItem __instance)
+            {
+                MelonLogger.Msg("[WildlifeItem] StartKillAnimation");
+                SanityManager.AddSanity(-30f);
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(GenericStatusBarSpawner), "Awake")]
+        private static class GenericStatusBarSpawner_Awake
+        {
+            private static void Postfix(GenericStatusBarSpawner __instance)
+            {
+                float XOffset = 0;
+                float YOffset = 0;
+                float Scale = 1;
+                if (__instance.gameObject.transform.parent.name.Contains("Large"))
+                {
+                    XOffset = 160;
+                    Scale = 1.8f;
+                    YOffset = 29;
+                } else if (__instance.gameObject.transform.parent.name.Contains("Regular"))
+                {
+                    XOffset = 80;
+                    Scale = 1f;
+                } else if (__instance.gameObject.transform.parent.name.Contains("Small"))
+                {
+                    XOffset = 40;
+                    Scale = 0.5f;
+                } else
+                {
+                    return;
+                }
+                if (__instance.m_MainSpriteName == "ico_status_hunger1")
+                {
+                    //GameObject NewBar = UnityEngine.Object.Instantiate(__instance.gameObject, __instance.gameObject.transform.parent);
 
+                    GameObject NewBar = UnityEngine.Object.Instantiate(__instance.m_Prefab, __instance.gameObject.transform.parent);
+                    NewBar.transform.localPosition = new Vector3(__instance.gameObject.transform.localPosition.x + XOffset, NewBar.transform.localPosition.y + YOffset, NewBar.transform.localPosition.z);
+                    NewBar.transform.localScale = new Vector3(Scale, Scale, Scale);
+                    StatusBar Bar = NewBar.GetComponent<StatusBar>();
+                    Bar.m_StatusBarType = StatusBar.StatusBarType.Condition + 1;
+                    Bar.m_OuterBoxSprite.spriteName = "ico_xpModeNowhereToHide2020";
+                    Bar.m_SpriteWhenEmpty.spriteName = "ico_xpModeNowhereToHide2020";
+                    Bar.m_ThresholdCritical = 0.3f;
+                    Bar.m_HighThreshold = 0.42f;
+                    Bar.m_MediumThreshold = 0.3f;
+                    StatusBarHelper Helper = NewBar.AddComponent<StatusBarHelper>();
+                    Helper.m_Root = Bar.m_HierarchyRoot;
+                    Helper.m_RootTrack = __instance.m_SpawnedStatusBar.m_HierarchyRoot;
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(StatusBar), "GetRateOfChange")]
+        private static class StatusBar_GetRateOfChange
+        {
+            private static void Postfix(StatusBar __instance, ref float __result)
+            {
+                if(__instance.m_StatusBarType == StatusBar.StatusBarType.Condition + 1)
+                {
+                    __result = -SanityManager.GetRate();
+                    //MelonLogger.Msg("[StatusBar][GetRateOfChange] Sanity " + __result);
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(StatusBar), "GetFillValue")]
+        private static class StatusBar_GetFillValue
+        {
+            private static void Postfix(StatusBar __instance, ref float __result)
+            {
+                if (__instance.m_StatusBarType == StatusBar.StatusBarType.Condition + 1)
+                {
+                    __result = (float)(double)SanityManager.m_CurrentSanity / SanityManager.m_MaxSanity;
+                }
+            }
+        }
 
+        [HarmonyLib.HarmonyPatch(typeof(ResearchItem), "OnResearchComplete")]
+        private static class ResearchItem_OnResearchComplete
+        {
+            private static bool Prefix(ResearchItem __instance)
+            {
+                GearItem Gi = __instance.GetComponent<GearItem>();
+                if (Gi && Gi.m_GearName == "GEAR_SCSanityBook")
+                {
+                    SanityManager.m_CanSeeSanity = true;
+                    InterfaceManager.m_Panel_HUD.ShowBuffNotification("Hidden Knowlanages", "Sanity status revealed", "ico_xpModeNowhereToHide2020");
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "RefreshReadPanel")]
+        private static class Panel_Inventory_Examine_RefreshReadPanel
+        {
+            private static void Postfix(Panel_Inventory_Examine __instance)
+            {
+                if(__instance.m_GearItem)
+                {
+                    if (__instance.m_GearItem.m_ResearchItem)
+                    {
+                        if(__instance.m_GearItem.m_GearName == "GEAR_SCSanityBook")
+                        {
+                            for (int index = 0; index < __instance.m_ItemIcons.Length; ++index)
+                            {
+                                __instance.m_ItemIcons[index].gameObject.SetActive(false);
+                            }
+                            //__instance.m_BookNameLabel.text = "";
+                            //__instance.m_BookDescLabel.text = "";
+                            __instance.m_ResearchIcon.spriteName = "ico_xpModeNowhereToHide2020";
+                            __instance.m_SkillImprovedLabel.text = "Gives ability to know your sanity status.";
+                            __instance.m_SkillProgressBarLabel.text = "";
+                            __instance.m_SkillProgressBar.value = 0;
+                            __instance.m_SkillProgressBarSprite.fillAmount = 0;
+                            __instance.m_SkillProgressBar.gameObject.SetActive(false);
+                            __instance.m_SkillLevelLabel.transform.parent.gameObject.SetActive(false);
+                        } else
+                        {
+                            __instance.m_SkillProgressBar.gameObject.SetActive(true);
+                            __instance.m_SkillLevelLabel.transform.parent.gameObject.SetActive(true);
+                        }
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "OnRead")]
+        private static class Panel_Inventory_Examine_OnRead
+        {
+            private static bool Prefix(Panel_Inventory_Examine __instance)
+            {
+                if (__instance.m_GearItem)
+                {
+                    if (SanityManager.m_CanSeeSanity)
+                    {
+                        GameAudioManager.PlayGUIError();
+                        HUDMessage.AddMessage(Localization.Get("GAMEPLAY_ResearchAlreadyCompleted"));
+                        return false;
+                    }
+                    
+                    
+                    if (__instance.m_GearItem.m_ResearchItem)
+                    {
+                        if (__instance.m_GearItem.m_GearName == "GEAR_SCSanityBook")
+                        {
+                            __instance.StartRead(__instance.m_HoursToRead * 60, __instance.m_GearItem.m_ResearchItem.m_ReadAudio);
+                        }
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
 
 
         //[HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "GetGearItemsForRadial")]

@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.12.2";
+            public const string Version = "0.13.0";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 5;
         }
@@ -238,8 +238,6 @@ namespace SkyCoop
         public static bool UseBoltInsteadOfStone = false;
         public static bool OriginalRadioSeaker = false;
         public static bool VanilaRadio = false;
-        public static GameObject RefMan = null;
-        public static bool SeenRefMan = false;
 
 
         public static GameObject ViewModelDummy = null;
@@ -909,6 +907,19 @@ namespace SkyCoop
                 Shared.SkipRTTime(Hours);
             }
         }
+        public static void SetSanity()
+        {
+            SanityManager.m_CurrentSanity = uConsole.GetFloat();
+        }
+        public static void SetCanSeeSanity()
+        {
+            SanityManager.m_CanSeeSanity = !SanityManager.m_CanSeeSanity;
+        }
+        public static void ConsolePlaySound()
+        {
+            GameAudioManager.PlaySound(uConsole.GetString(), InterfaceManager.GetSoundEmitter());
+        }
+
 
         public static void ConsoleRPC()
         {
@@ -1002,10 +1013,14 @@ namespace SkyCoop
             uConsole.RegisterCommand("skill_firstaid", new Action(SetFirstAidTier));
             uConsole.RegisterCommand("skip", new Action(SkipHourConsole));
             uConsole.RegisterCommand("rpc", new Action(ConsoleRPC));
+            uConsole.RegisterCommand("set_sanity", new Action(SetSanity));
+            uConsole.RegisterCommand("cansee_sanity", new Action(SetCanSeeSanity));
+            uConsole.RegisterCommand("play_sound", new Action(ConsolePlaySound));
             Comps.RegisterComponents();
             ExpeditionManager.InitClues();
             Shared.LoadInterloperReplace();
             TFHUD.Enabled = Environment.GetCommandLineArgs().Contains("-tfhud");
+            MPSaveManager.AddSpecialItem(JSON.Dump(new ExpeditionManager.SpecialExpeditionItem()), "Template");
         }
 
         public static void LootEverything()
@@ -1722,26 +1737,26 @@ namespace SkyCoop
 
             string PathHands = "/CHARACTER_FPSPlayer";
             GameObject HandsTransform = GameObject.Find(PathHands);
-            if (HandsTransform && ViewModelHands == null)
-            {
-                GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("FPH_Anims");
-                ViewModelHands = GameObject.Instantiate(LoadedAssets, HandsTransform.transform.position, HandsTransform.transform.rotation, HandsTransform.transform);
-                ViewModelHands.name = "FPH_Anims";
-                ViewModelHands.transform.localPosition = new Vector3(-0.0006f, 1, 0.0012f);
-                //ViewModelHands.transform.localRotation = new Quaternion(0.3304f, 0.9077f, -0.0885f, -0.2432f);
-                //ViewModelHands.transform.localScale = new Vector3(0.045f, 0.045f, 0.045f);
-                string Base = "/CHARACTER_FPSPlayer/NEW_FPHand_Rig/GAME_DATA/Clothing/FPH_Female_Arms/GAME_DATA/Origin/HipJoint/Chest_Joint/Camera_Weapon_Offset/Shoulder_Joint/Shoulder_Joint_Offset/Left_Shoulder_Joint_Offset";
-                GameObject LeftShoulderJoint = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint");
-                GameObject LeftElbowJoint = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint");
-                GameObject LeftWristJoint = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint");
-                GameObject LeftPalm = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm");
-                GameObject Left_HandIndex1 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandIndex1");
-                GameObject Left_HandIndex2 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandIndex1/Left_HandIndex2");
-                GameObject Left_HandIndex3 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandIndex1/Left_HandIndex2/Left_HandIndex3");
-                GameObject Left_HandMiddle1 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandMiddle1");
-                GameObject Left_HandMiddle2 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandMiddle1/Left_HandMiddle2");
-                GameObject Left_HandMiddle3 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandMiddle1/Left_HandMiddle2/Left_HandMiddle3");
-            }
+            //if (HandsTransform && ViewModelHands == null)
+            //{
+            //    GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("FPH_Anims");
+            //    ViewModelHands = GameObject.Instantiate(LoadedAssets, HandsTransform.transform.position, HandsTransform.transform.rotation, HandsTransform.transform);
+            //    ViewModelHands.name = "FPH_Anims";
+            //    ViewModelHands.transform.localPosition = new Vector3(-0.0006f, 1, 0.0012f);
+            //    //ViewModelHands.transform.localRotation = new Quaternion(0.3304f, 0.9077f, -0.0885f, -0.2432f);
+            //    //ViewModelHands.transform.localScale = new Vector3(0.045f, 0.045f, 0.045f);
+            //    string Base = "/CHARACTER_FPSPlayer/NEW_FPHand_Rig/GAME_DATA/Clothing/FPH_Female_Arms/GAME_DATA/Origin/HipJoint/Chest_Joint/Camera_Weapon_Offset/Shoulder_Joint/Shoulder_Joint_Offset/Left_Shoulder_Joint_Offset";
+            //    GameObject LeftShoulderJoint = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint");
+            //    GameObject LeftElbowJoint = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint");
+            //    GameObject LeftWristJoint = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint");
+            //    GameObject LeftPalm = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm");
+            //    GameObject Left_HandIndex1 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandIndex1");
+            //    GameObject Left_HandIndex2 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandIndex1/Left_HandIndex2");
+            //    GameObject Left_HandIndex3 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandIndex1/Left_HandIndex2/Left_HandIndex3");
+            //    GameObject Left_HandMiddle1 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandMiddle1");
+            //    GameObject Left_HandMiddle2 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandMiddle1/Left_HandMiddle2");
+            //    GameObject Left_HandMiddle3 = GameObject.Find(Base + "/LeftClavJoint/LeftShoulderJoint/LeftElbowJoint/LeftWristJoint/LeftPalm/Left_HandMiddle1/Left_HandMiddle2/Left_HandMiddle3");
+            //}
 
             ViewModelHatchet = GameObject.Find(Path + "mesh_hatchet");
             ViewModelHatchet2 = GameObject.Find(Path + "mesh_Hatchet_improvised");
@@ -5288,6 +5303,7 @@ namespace SkyCoop
 
         private static void EveryInGameMinute()
         {
+            SanityManager.EveryInGameMinute();
             if (iAmHost == true)
             {
                 if (IsCycleSkiping == true && GameManager.m_PlayerManager != null)
@@ -5326,7 +5342,6 @@ namespace SkyCoop
                     }
                 }
             }
-            MaySpawnRefMan();
         }
 
         public static float nextActionTime = 0.0f;
@@ -6745,6 +6760,13 @@ namespace SkyCoop
 
         public static void FakeDropItem(int GearID, Vector3 v3, Quaternion rot, int Hash, DataStr.ExtraDataForDroppedGear extra)
         {
+            bool IsSpeicalItem = false;
+
+            if(extra.m_Variant == -2)
+            {
+                IsSpeicalItem = true;
+            }
+
             if (DedicatedServerAppMode)
             {
                 return;
@@ -6752,10 +6774,13 @@ namespace SkyCoop
             
             string gearName = extra.m_GearName;
 
-            if (DroppedGearsObjs.ContainsKey(Hash) == true)
+            if (!IsSpeicalItem)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Gear with hash " + Hash + " already exist!");
-                return;
+                if (DroppedGearsObjs.ContainsKey(Hash) == true)
+                {
+                    MelonLogger.Msg(ConsoleColor.Red, "Gear with hash " + Hash + " already exist!");
+                    return;
+                }
             }
 
             GameObject reference = GetGearItemObject(gearName);
@@ -6790,7 +6815,14 @@ namespace SkyCoop
                             }
                         }
                     }
-                    _DisName = GI.m_LocalizedDisplayName.Text();
+                    if (!IsSpeicalItem)
+                    {
+                        _DisName = GI.m_LocalizedDisplayName.Text();
+                    } else
+                    {
+                        _DisName = Localization.Get(extra.m_ExpeditionNote);
+                    }
+                    
                 }
 
                 if (obj.GetComponent<Bed>() != null)
@@ -6861,30 +6893,38 @@ namespace SkyCoop
                     }
                 }
 
-                if (!string.IsNullOrEmpty(extra.m_PhotoGUID) && extra.m_GearName != "gear_scmapreveal")
+                if (!IsSpeicalItem)
                 {
-                    MelonLogger.Msg("Photo "+ extra.m_PhotoGUID);
-                    Texture2D tex = MPSaveManager.GetPhotoTexture(extra.m_PhotoGUID, extra.m_GearName);
-                    if (tex)
+                    if (!string.IsNullOrEmpty(extra.m_PhotoGUID) && extra.m_GearName != "gear_scmapreveal")
                     {
-                        obj.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
-                    } else
-                    {
-                        Shared.RequestPhoto(extra.m_PhotoGUID);
-                        MelonLogger.Msg("Don't have texture for it, request from host");
+                        MelonLogger.Msg("Photo " + extra.m_PhotoGUID);
+                        Texture2D tex = MPSaveManager.GetPhotoTexture(extra.m_PhotoGUID, extra.m_GearName);
+                        if (tex)
+                        {
+                            obj.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                        } else
+                        {
+                            Shared.RequestPhoto(extra.m_PhotoGUID);
+                            MelonLogger.Msg("Don't have texture for it, request from host");
+                        }
                     }
-                }
-
-                Comps.DroppedGearDummy DGD = obj.AddComponent<Comps.DroppedGearDummy>();
-                DGD.m_SearchKey = Hash;
-                DGD.m_Extra = extra;
-                DGD.m_LocalizedDisplayName = _DisName;
-                if (_FakeBed)
+                    Comps.DroppedGearDummy DGD = obj.AddComponent<Comps.DroppedGearDummy>();
+                    DGD.m_SearchKey = Hash;
+                    DGD.m_Extra = extra;
+                    DGD.m_LocalizedDisplayName = _DisName;
+                    if (_FakeBed)
+                    {
+                        obj.AddComponent<Comps.FakeBed>();
+                    }
+                    obj.SetActive(true);
+                    DroppedGearsObjs.Add(Hash, obj);
+                } else
                 {
-                    obj.AddComponent<Comps.FakeBed>();
+                    Comps.SpecialItemDummy SID = obj.AddComponent<Comps.SpecialItemDummy>();
+                    SID.m_Extra = extra;
+                    SID.m_LocalizedDisplayName = _DisName;
+                    obj.SetActive(true);
                 }
-                obj.SetActive(true);
-                DroppedGearsObjs.Add(Hash, obj);
             }
             else
             {
@@ -7055,6 +7095,24 @@ namespace SkyCoop
             newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Placed);
             newGear.AddComponent<Comps.FakeBedDummy>().m_LinkedFakeObject = obj;
             GameManager.GetPlayerManagerComponent().ProcessBedInteraction(newGear.GetComponent<GearItem>().m_Bed);
+        }
+
+        public static void PickupSpecialItem(GameObject obj, string ReferenceName)
+        {
+            HUDMessage.AddMessage("Youn found [50C878]special item[-] use it to start advanced expedition via handheld radio.");
+            UnityEngine.Object.Destroy(obj);
+            if (sendMyPosition == true)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.PICKUPSPECAILITEM))
+                {
+                    _packet.Write(ReferenceName);
+                    SendUDPData(_packet);
+                }
+                return;
+            }else if (iAmHost)
+            {
+                ExpeditionManager.GivePlayerSpeicalItem(0, ReferenceName);
+            }
         }
 
         public static void PickupDroppedGear(GameObject obj, bool SkipLocksmith = false)
@@ -11241,7 +11299,7 @@ namespace SkyCoop
                     }
                 }
             }
-            CheckSeeingRefMan();
+            SanityManager.Update();
         }
 
         public static bool Flag1 = true;
@@ -13271,19 +13329,14 @@ namespace SkyCoop
             }
         }
         public static string DeleteGearOnExpeditionConfirmed = "";
-        public static void StartExpeditionWithClue(ExpeditionClue Clue)
+        public static void StartExpeditionWithClue(SpecialExpeditionItem Clue)
         {
             if (iAmHost)
             {
                 bool Started = ExpeditionManager.StartNewExpedition(Server.GetMACByID(0), 0, Clue.m_ExpeditionAlias, false, true);
-                if (Started)
-                {
-                    GameManager.GetInventoryComponent().RemoveGearFromInventory(Clue.m_ExpeditionItem, 1);
-                }
             } else if(sendMyPosition)
             {
-                MyMod.DoPleaseWait("Please wait...", "Calling to coordinator...");
-                DeleteGearOnExpeditionConfirmed = Clue.m_ExpeditionItem;
+                MyMod.DoPleaseWait("Please wait...", "Coordinating...");
                 using (Packet _packet = new Packet((int)ClientPackets.REQUESTSPECIALEXPEDITION))
                 {
                     _packet.Write(Clue.m_ExpeditionAlias);
@@ -13293,85 +13346,38 @@ namespace SkyCoop
             }
         }
 
-        public static string GetClueGear(bool RollChance = true)
-        {
-            System.Random RNG = new System.Random();
-            if (RollChance)
-            {
-                if (RNG.NextDouble() > ExpeditionManager.m_ClueChance)
-                {
-                    MelonLogger.Msg(ConsoleColor.Blue, "[GetClueGear] Failed!");
-                    return "";
-                }
-            }
-            List<string> PossibleGears = new List<string>();
-            foreach (ExpeditionClue Clue in ExpeditionManager.m_Clues)
-            {
-                bool HaveThisOne = false;
-                foreach (GearItemObject Gear in GameManager.GetInventoryComponent().m_Items)
-                {
-                    string ClueName = Clue.m_ExpeditionItem.ToLower();
-                    string GearName = Gear.m_GearItemName.ToLower();
-                    string AltName = "";
-                    if (Gear != null && Gear.m_GearItem != null && Gear.m_GearItem.m_NarrativeCollectibleItem)
-                    {
-                        AltName = GearName + "#" + Gear.m_GearItem.m_NarrativeCollectibleItem.m_JournalEntryNumber;
-                    }
-                    if (GearName == ClueName || (!string.IsNullOrEmpty(AltName) && AltName == ClueName))
-                    {
-                        HaveThisOne = true;
-                        break;
-                    }
-                }
-                if (!HaveThisOne)
-                {
-                    PossibleGears.Add(Clue.m_ExpeditionItem);
-                }
-            }
-            if(PossibleGears.Count == 0)
-            {
-                MelonLogger.Msg(ConsoleColor.Blue, "[GetClueGear] Have everything, return nothing");
-                return "";
-            }else if(PossibleGears.Count == 1)
-            {
-                string Gear = PossibleGears[0];
-                MelonLogger.Msg(ConsoleColor.Blue, "[GetClueGear] "+ Gear);
-                return Gear;
-            } else
-            {
-                string Gear = PossibleGears[RNG.Next(0, PossibleGears.Count - 1)];
-                MelonLogger.Msg(ConsoleColor.Blue, "[GetClueGear] " + Gear);
-                return Gear;
-            }
-        }
-
-        public static List<ExpeditionClue> FindClues()
-        {
-            List<ExpeditionClue> Clues = new List<ExpeditionClue>();
-            foreach (ExpeditionClue Clue in ExpeditionManager.m_Clues)
-            {
-                foreach (GearItemObject Gear in GameManager.GetInventoryComponent().m_Items)
-                {
-                    string ClueName = Clue.m_ExpeditionItem.ToLower();
-                    string GearName = Gear.m_GearItemName.ToLower();
-                    string AltName = "";
-                    if(Gear != null && Gear.m_GearItem != null && Gear.m_GearItem.m_NarrativeCollectibleItem)
-                    {
-                        AltName = GearName + "#" + Gear.m_GearItem.m_NarrativeCollectibleItem.m_JournalEntryNumber;
-                    }
-                    if(GearName == ClueName || (!string.IsNullOrEmpty(AltName) && AltName == ClueName))
-                    {
-                        Clues.Add(Clue);
-                    }
-                }
-            }
-            return Clues;
-        }
-
         public static void ShowCluesPicker()
         {
-            List<ExpeditionClue> Clues = FindClues();
-            if (Clues.Count == 0)
+            if (iAmHost)
+            {
+                ShowCluesPicker(ExpeditionManager.GetAllSpeicalItemsOfPlayer(MPSaveManager.GetSubNetworkGUID()));
+            } else if (sendMyPosition)
+            {
+                SetRepeatPacket(ResendPacketType.Cancel, 5);
+                MyMod.DoPleaseWait("Please wait...", "Looking in pockets...");
+                using (Packet _packet = new Packet((int)ClientPackets.REQUESTSPECIALITEMS))
+                {
+                    _packet.Write(true);
+                    SendUDPData(_packet);
+                }
+            }
+        }
+        public static void ShowCluesPicker(List<string> ItemNames)
+        {
+            List<SpecialExpeditionItem> Items = new List<SpecialExpeditionItem>();
+            foreach (string ItemName in ItemNames)
+            {
+                SpecialExpeditionItem Item = ExpeditionManager.GetSpecialItem(ItemName);
+                if (Item != null)
+                {
+                    Items.Add(Item);
+                }
+            }
+            ShowCluesPicker(Items);
+        }
+        public static void ShowCluesPicker(List<SpecialExpeditionItem> Items)
+        {
+            if (Items.Count == 0)
             {
                 HUDMessage.AddMessage("You don't have any [50C878]special items[-] to start advanced expedition.");
                 return;
@@ -13384,10 +13390,10 @@ namespace SkyCoop
                 Panel.Enable(true);
                 Panel.m_ActionPickerItemDataList.Clear();
 
-                foreach (ExpeditionClue Clue in Clues)
+                foreach (SpecialExpeditionItem Item in Items)
                 {
-                    Action act = new Action(() => StartExpeditionWithClue(Clue));
-                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, Clue.m_ExpeditionName, act));
+                    Action act = new Action(() => StartExpeditionWithClue(Item));
+                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, Item.m_GearName, act));
                 }
 
                 Panel.m_ObjectInteractedWith = null;
@@ -14075,46 +14081,6 @@ namespace SkyCoop
             } else
             {
                 return (GameRegion)Reg;
-            }
-        }
-
-        public static void MaySpawnRefMan()
-        {
-            System.Random RNG = new System.Random();
-            if (GameManager.m_TimeOfDay != null && GameManager.m_TimeOfDay.IsNight() && RNG.NextDouble() < 0.001f)
-            {
-                SpawnRefMan();
-            }
-        }
-
-        public static void CheckSeeingRefMan()
-        {
-            if(RefMan != null)
-            {
-                if(RefMan.GetComponent<MeshRenderer>().isVisible && !SeenRefMan)
-                {
-                    SeenRefMan = true;
-                    PlayerDamageEvent.SpawnAfflictionEvent("GAMEPLAY_AfflictionFearAfraid", "GAMEPLAY_Affliction", "ico_injury_eventEntity2", InterfaceManager.m_FirstAidRedColor);
-                    GameObject emitterFromGameObject = GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject());
-                    AkSoundEngine.StopPlayingID(AkSoundEngine.PostEvent("Play_FearAffliction", emitterFromGameObject, 4, null, null), 40000);
-                }
-            } else
-            {
-                SeenRefMan = false;
-            }
-        }
-
-        public static void SpawnRefMan()
-        {
-            GameObject reference = Resources.Load<GameObject>("ref_man_1_85_Prefab");
-
-            if (reference)
-            {
-                Vector3 v3 = GameManager.GetPlayerTransform().transform.position;
-                v3 = v3 - GameManager.GetPlayerTransform().transform.forward * 2;
-
-                RefMan = UnityEngine.Object.Instantiate<GameObject>(reference, v3, GameManager.GetPlayerTransform().transform.rotation);
-                UnityEngine.Object.Destroy(RefMan, 5);
             }
         }
 

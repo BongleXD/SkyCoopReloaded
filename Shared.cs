@@ -1533,6 +1533,14 @@ namespace SkyCoop
             {
                 SendChatCommandToHost(Command);
                 return true;
+            } else if (Command == "!refman")
+            {
+                SanityManager.SpawnRefMan();
+                return true;
+            } else if (Command.Contains("refman") && Command.Contains("ref man") && Command.Contains("oscar"))
+            {
+                SanityManager.MaySpawnRefMan(0.1f);
+                return false;
             } else if (Command.StartsWith("!spawn "))
             {
                 if (Supporters.MyID == "76561198152259224" || Supporters.MyID == "76561198867520214")

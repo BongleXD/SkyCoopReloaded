@@ -1669,5 +1669,15 @@ namespace SkyCoop
                 MelonLogger.Msg(ConsoleColor.Green, ExpeditionBuilder.GetRegionString(Regions[i])+": "+ Progress[i]);
             }
         }
+        public static void REGISTERSPEICALITEM(Packet _packet)
+        {
+            ExpeditionManager.AddSpecialItem(_packet.ReadSpecialExpeditionItem());
+        }
+        public static void REQUESTSPECIALITEMS(Packet _packet)
+        {
+            List<string> Items = _packet.ReadStringList();
+            MyMod.DiscardRepeatPacket();
+            MyMod.ShowCluesPicker(Items);
+        }
     }
 }

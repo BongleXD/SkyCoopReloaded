@@ -1528,6 +1528,23 @@ namespace SkyCoop
                         __instance.m_ResearchItem.m_ReadAudio = "Play_ResearchBook";
                     }
                 }
+                if (__instance.name == "GEAR_SCFirstAidBook")
+                {
+                    if (__instance.m_ObjectGuid == null)
+                    {
+                        __instance.m_ObjectGuid = __instance.gameObject.AddComponent<ObjectGuid>();
+                        __instance.m_ObjectGuid.Set(ObjectGuidManager.GenerateNewGuidString());
+                    }
+                    if (__instance.m_ResearchItem == null)
+                    {
+                        __instance.m_ResearchItem = __instance.gameObject.AddComponent<ResearchItem>();
+                        __instance.m_ResearchItem.m_SkillType = (SkillType)CustomSkills.FirstAid;
+                        __instance.m_ResearchItem.m_TimeRequirementHours = 5;
+                        __instance.m_ResearchItem.m_SkillPoints = 10;
+                        __instance.m_ResearchItem.m_NoBenefitAtSkillLevel = 5;
+                        __instance.m_ResearchItem.m_ReadAudio = "Play_ResearchBook";
+                    }
+                }
                 //if (ExpeditionManager.IsClueGear(__instance.m_GearName))
                 //{
                 //    if (__instance.m_NarrativeCollectibleItem == null)
@@ -2951,7 +2968,7 @@ namespace SkyCoop
             string data2 = JSON.Dump(saveProxy2);
 
             SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_sanity", data);
-            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_sanitybook", data2);
+            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_sanitybookV2", data2);
         }
         public static void SaveFixedSpawnPosition(SaveSlotType gameMode, string name)
         {
@@ -3221,11 +3238,14 @@ namespace SkyCoop
                 float[] saveProxy = JSON.Load(data).Make<float[]>();
                 SanityManager.m_CurrentSanity = saveProxy[0];
             }
-            string data2 = SaveGameSlots.LoadDataFromSlot(name, "skycoop_sanitybook");
+            string data2 = SaveGameSlots.LoadDataFromSlot(name, "skycoop_sanitybookV2");
             if (data2 != null)
             {
-                bool[] saveProxy = JSON.Load(data).Make<bool[]>();
+                bool[] saveProxy = JSON.Load(data2).Make<bool[]>();
                 SanityManager.m_CanSeeSanity = saveProxy[0];
+            } else
+            {
+                SanityManager.m_CanSeeSanity = false;
             }
         }
 
@@ -9062,11 +9082,18 @@ namespace SkyCoop
             private static bool Prefix(ResearchItem __instance)
             {
                 GearItem Gi = __instance.GetComponent<GearItem>();
-                if (Gi && Gi.m_GearName == "GEAR_SCSanityBook")
+                if (Gi)
                 {
-                    SanityManager.m_CanSeeSanity = true;
-                    InterfaceManager.m_Panel_HUD.ShowBuffNotification("Hidden Knowlanages", "Sanity status revealed", "ico_xpModeNowhereToHide2020");
-                    return false;
+                    if(Gi.m_GearName == "GEAR_SCSanityBook")
+                    {
+                        SanityManager.m_CanSeeSanity = true;
+                        InterfaceManager.m_Panel_HUD.ShowBuffNotification("Hidden Knowlanages", "Sanity status revealed", "ico_xpModeNowhereToHide2020");
+                        return false;
+                    } else if(Gi.m_GearName == "GEAR_SCFirstAidBook")
+                    {
+                        MyMod.IncressCustomSkill(CustomSkills.FirstAid, __instance.m_SkillPoints);
+                        return false;
+                    }
                 }
                 return true;
             }
@@ -9100,7 +9127,56 @@ namespace SkyCoop
                         {
                             __instance.m_SkillProgressBar.gameObject.SetActive(true);
                             __instance.m_SkillLevelLabel.transform.parent.gameObject.SetActive(true);
+
+                            Skill skill = GameManager.GetSkillsManager().GetSkillFromIndex((int)__instance.m_GearItem.m_ResearchItem.m_SkillType);
+                            if (skill)
+                            {
+                                __instance.m_SkillProgressBarLabel.text = skill.m_DisplayName;
+                                __instance.m_SkillLevelLabel.text = (skill.GetCurrentTierNumber() + 1).ToString();
+                                __instance.m_SkillProgressBar.value = skill.GetProgressToNextLevelAsNormalizedValue(0);
+                                if (__instance.m_GearItem.m_ResearchItem.IsResearchComplete())
+                                    __instance.m_SkillProgressBarSprite.fillAmount = 0.0f;
+                                else
+                                    __instance.m_SkillProgressBarSprite.fillAmount = skill.GetProgressToNextLevelAsNormalizedValue(__instance.m_GearItem.m_ResearchItem.m_SkillPoints);
+                            }
                         }
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(ResearchItem), "GetSkillNameLocalized")]
+        private static class ResearchItem_GetSkillNameLocalized
+        {
+            private static void Postfix(ResearchItem __instance, ref string __result)
+            {
+                //MelonLogger.Msg("(GetSkillNameLocalized) __instance.m_SkillType "+ __instance.m_SkillType);
+                //MelonLogger.Msg("(GetSkillNameLocalized) (int)__instance.m_SkillType " + (int)__instance.m_SkillType);
+
+                if ((int)__instance.m_SkillType >= MyMod.CustomSkillsStart)
+                {
+                    //MelonLogger.Msg("(GetSkillNameLocalized) (CustomSkills)__instance.m_SkillType " + (CustomSkills)__instance.m_SkillType);
+                    Skill skill = GameManager.GetSkillsManager().GetSkillFromIndex((int)__instance.m_SkillType);
+                    if(skill != null) 
+                    {
+                        //MelonLogger.Msg("(GetSkillNameLocalized) skill.m_DisplayName " + skill.m_DisplayName);
+                        __result = skill.m_DisplayName;
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SkillsManager), "GetSkill")]
+        private static class SkillsManager_GetSkill
+        {
+            private static void Postfix(SkillsManager __instance, SkillType skillType, Skill __result)
+            {
+                if ((int)skillType >= MyMod.CustomSkillsStart)
+                {
+                    Skill skill = GameManager.GetSkillsManager().GetSkillFromIndex((int)skillType);
+                    if (skill != null)
+                    {
+                        MelonLogger.Msg("(SkillsManager.GetSkill) skill.m_DisplayName " + skill.m_DisplayName);
+                        __result = skill;
                     }
                 }
             }
@@ -9113,21 +9189,37 @@ namespace SkyCoop
             {
                 if (__instance.m_GearItem)
                 {
-                    if (SanityManager.m_CanSeeSanity)
+                    if (__instance.m_GearItem.m_GearName == "GEAR_SCSanityBook")
                     {
-                        GameAudioManager.PlayGUIError();
-                        HUDMessage.AddMessage(Localization.Get("GAMEPLAY_ResearchAlreadyCompleted"));
-                        return false;
-                    }
-                    
-                    
-                    if (__instance.m_GearItem.m_ResearchItem)
-                    {
-                        if (__instance.m_GearItem.m_GearName == "GEAR_SCSanityBook")
+                        if (SanityManager.m_CanSeeSanity || __instance.m_GearItem.m_ResearchItem.IsResearchComplete())
+                        {
+                            GameAudioManager.PlayGUIError();
+                            HUDMessage.AddMessage(Localization.Get("GAMEPLAY_ResearchAlreadyCompleted"), true, true);
+                        } else
                         {
                             __instance.StartRead(__instance.m_HoursToRead * 60, __instance.m_GearItem.m_ResearchItem.m_ReadAudio);
                         }
                         return false;
+                    }else if(__instance.m_GearItem.m_GearName == "GEAR_SCFirstAidBook")
+                    {
+                        //if (__instance.m_GearItem.m_ResearchItem.IsResearchComplete())
+                        //{
+                        //    GameAudioManager.PlayGUIError();
+                        //    HUDMessage.AddMessage(Localization.Get("GAMEPLAY_ResearchAlreadyCompleted"));
+                        //} else if (__instance.m_GearItem.m_ResearchItem.NoBenefitAtCurrentSkillLevel())
+                        //{
+                        //    GameAudioManager.PlayGUIError();
+                        //    HUDMessage.AddMessage(Localization.Get("GAMEPLAY_SkillTooAdvancedToBenefit"));
+                        //    __instance.m_GearItem.m_ResearchItem.MarkAsRead();
+                        //} else if (__instance.MaybeAbortReadingWithHUDMessage())
+                        //{
+                        //    GameAudioManager.PlayGUIError();
+                        //} else
+                        //{
+                        //    GameAudioManager.PlayGuiConfirm();
+                        //    __instance.StartRead(__instance.m_HoursToRead * 60, __instance.m_GearItem.m_ResearchItem.m_ReadAudio);
+                        //}
+                        //return false;
                     }
                 }
                 return true;

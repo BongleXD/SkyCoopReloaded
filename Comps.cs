@@ -45,6 +45,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<ExpeditionInteractive>();
             ClassInjector.RegisterTypeInIl2Cpp<SpecialItemDummy>();
             ClassInjector.RegisterTypeInIl2Cpp<StatusBarHelper>();
+            ClassInjector.RegisterTypeInIl2Cpp<FakeDecoy>();
         }
         
         
@@ -55,6 +56,7 @@ namespace SkyCoop
             public string m_LocalizedDisplayName;
             public int m_SearchKey = 0;
             public DataStr.ExtraDataForDroppedGear m_Extra = new DataStr.ExtraDataForDroppedGear();
+            public GearItem m_DecoyDummy = null;
         }
         public class SpecialItemDummy : MonoBehaviour
         {
@@ -307,6 +309,41 @@ namespace SkyCoop
                 }
             }
 
+            public void UpdateFeeding()
+            {
+                if (m_Animal && (m_MyControlled || AnimalsController))
+                {
+                    BaseAi bai = m_Animal.GetComponent<BaseAi>();
+                    if (bai)
+                    {
+                        if (bai.m_TargetBodyHarvest)
+                        {
+                            if (MyMod.iAmHost)
+                            {
+                                BodyHarvest BH = bai.m_TargetBodyHarvest;
+                                string GUID = BH.GetComponent<ObjectGuid>().Get();
+                                DataStr.AnimalKilled Data = GetAnimalMeatForFeeding(bai.m_TargetBodyHarvest);
+                                if (Data != null)
+                                {
+                                    Shared.OnAnimalCorpseChanged(GUID, 0.016f, 0, 0, m_Animal.GetComponent<ObjectGuid>().Get());
+                                }
+                            }
+                            if (MyMod.sendMyPosition)
+                            {
+                                BodyHarvest BH = bai.m_TargetBodyHarvest;
+                                string GUID = BH.GetComponent<ObjectGuid>().Get();
+                                using (Packet _packet = new Packet((int)ClientPackets.ANIMALBITECORPSE))
+                                {
+                                    _packet.Write(GUID);
+                                    _packet.Write(m_Animal.GetComponent<ObjectGuid>().Get());
+                                    SendUDPData(_packet);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             public void CallSync()
             {
                 if (m_Animal != null && m_Banned == false && m_Animal.activeSelf == true && m_PickedUp == false)
@@ -411,6 +448,7 @@ namespace SkyCoop
                     if (Time.time > nextActionTimeNR)
                     {
                         nextActionTimeNR += noresponce_perioud;
+                        UpdateFeeding();
                         ReTakeCoolDown--;
                         if (ReTakeCoolDown <= 0)
                         {
@@ -3192,7 +3230,16 @@ namespace SkyCoop
                 }
             }
         }
-        
+        public class FakeDecoy : MonoBehaviour
+        {
+            public FakeDecoy(IntPtr ptr) : base(ptr) { }
+            public DroppedGearDummy m_DropGearDummy = null;
+            void Update()
+            {
+
+            }
+        }
+
         public class ExpeditionInteractive : MonoBehaviour
         {
             public ExpeditionInteractive(IntPtr ptr) : base(ptr) { }

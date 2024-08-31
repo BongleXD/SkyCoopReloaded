@@ -91,6 +91,26 @@ namespace SkyCoop
                     {
                         stillExists = true;
                     }
+
+                    string DecoyDebug = "";
+                    GUI.Label(new Rect(850, 10 + offset * 2, 500, 100), "Decoy:");
+                    for (int i = 0; i < GearManager.m_DroppedDecoys.Count; i++)
+                    {
+                        GearItem Gi = GearManager.m_DroppedDecoys[i];
+                        if (Gi)
+                        {
+                            string Name = Gi.m_GearName;
+                            Comps.FakeDecoy FakeDecoy = Gi.gameObject.GetComponent<Comps.FakeDecoy>();
+                            if (FakeDecoy && FakeDecoy.m_DropGearDummy)
+                            {
+                                Name += " (" + FakeDecoy.m_DropGearDummy.m_Extra.m_GearName + ")";
+                            }
+                            GUI.Label(new Rect(850, 10 + offset * (3 + i), 500, 100), i + ". " + Name);
+                        }
+                    }
+
+
+
                     GUI.Label(new Rect(700, 10 + offset * 3, 500, 100), "Still exists: " + stillExists);
 
                     if (stillExists == true && MyMod.DebugLastAnimal != null && MyMod.AdvancedDebugMode == "AnimalsAllStats")

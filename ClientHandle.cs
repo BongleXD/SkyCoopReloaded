@@ -1679,5 +1679,17 @@ namespace SkyCoop
             MyMod.DiscardRepeatPacket();
             MyMod.ShowCluesPicker(Items);
         }
+        public static void ANIMALSTOPSFEEDING(Packet _packet)
+        {
+            GameObject Obj = ObjectGuidManager.Lookup(_packet.ReadString());
+            if (Obj == null)
+            {
+                BaseAi BI = Obj.GetComponent<BaseAi>();
+                if (BI)
+                {
+                    BI.m_TargetBodyHarvest = null;
+                }
+            }
+        }
     }
 }

@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.13.1";
+            public const string Version = "0.13.2";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 5;
         }
@@ -872,7 +872,7 @@ namespace SkyCoop
 
         private static void SetCustomSkillLevel(CustomSkills skillType)
         {
-            Skill skill = GameManager.GetSkillsManager().m_Skills[(int)skillType];
+            Skill skill = GetCustomSkill(skillType);
             if (skill == null)
             {
                 return;
@@ -1301,8 +1301,9 @@ namespace SkyCoop
         public const int CustomSkillsStart = 9;
         public enum CustomSkills
         {
-            FirstAid = 9,
+            FirstAid = 10,
         }
+
         public static List<int> SaveCustomSkills()
         {
             SkillsManager Manager = GameManager.GetSkillsManager();
@@ -1322,10 +1323,22 @@ namespace SkyCoop
             }
         }
 
+        public static Skill GetCustomSkill(CustomSkills SkillType)
+        {
+            foreach (Skill Skill in GameManager.GetSkillsManager().m_Skills)
+            {
+                if(Skill && (int)Skill.m_SkillType == (int)SkillType)
+                {
+                    return Skill;
+                }
+            }
+            return null;
+        }
+
         public static void IncressCustomSkill(CustomSkills Skill, int Points = 1)
         {
             SkillsManager Manager = GameManager.GetSkillsManager();
-            Skill Ski = Manager.m_Skills[(int)Skill];
+            Skill Ski = GetCustomSkill(Skill);
             int PreviousTier = Ski.GetCurrentTierNumber();
             Ski.IncrementPoints(Points, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
             int CurrentTier = Ski.GetCurrentTierNumber();
@@ -1349,7 +1362,7 @@ namespace SkyCoop
             SKill.m_SkillIcon = "ico_Radial_firstAid";
             SKill.m_SkillIconBackground = "ico_skill_large_firstAid";
             SKill.m_SkillImage = "ico_skill_large_firstAid";
-            SKill.m_SkillType = SkillType.IceFishing;
+            SKill.m_SkillType = (SkillType)CustomSkills.FirstAid;
             SKill.m_TierLocalizedDescriptions = new LocalizedString[5];
             SKill.m_TierLocalizedBenefits = new LocalizedString[5];
             for (int i = 0; i < SKill.m_TierLocalizedDescriptions.Length; i++)
@@ -3354,6 +3367,27 @@ namespace SkyCoop
         }
 
         public static BodyHarvest GoingToHarvest = null;
+
+        public static DataStr.AnimalKilled GetAnimalMeatForFeeding(BodyHarvest bh)
+        {
+            if (bh.gameObject.GetComponent<ObjectGuid>())
+            {
+                string GUID = bh.gameObject.GetComponent<ObjectGuid>().Get();
+
+                if (iAmHost == true)
+                {
+                    DataStr.AnimalKilled Animal;
+                    if (Shared.AnimalsKilled.TryGetValue(GUID, out Animal))
+                    {
+                        bh.m_MeatAvailableKG = Animal.m_Meat;
+                        bh.m_GutAvailableUnits = Animal.m_Guts;
+                        bh.m_HideAvailableUnits = Animal.m_Hide;
+                        return Animal;
+                    }
+                }
+            }
+            return null;
+        }
 
         public static void RequestAnimalCorpseInteration(BodyHarvest bh)
         {
@@ -5996,7 +6030,7 @@ namespace SkyCoop
             GameManager.GetSkillClothingRepair().SetPoints(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
             GameManager.GetSkillRevolver().SetPoints(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
             GameManager.GetSkillGunsmithing().SetPoints(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-            GameManager.GetSkillsManager().m_Skills[(int)CustomSkills.FirstAid].SetPoints(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
+            GetCustomSkill(CustomSkills.FirstAid).SetPoints(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
 
 
             ConsoleManager.CONSOLE_afflictions_cure();
@@ -6798,6 +6832,8 @@ namespace SkyCoop
                 DisableObjectForXPMode.RemoveDisabler(obj);
                 string _DisName = "";
                 bool _FakeBed = false;
+                bool IsDecoy = false;
+                ScentRangeCategory DecoyRange = ScentRangeCategory.RAW_FISH;
                 GearItem GI = obj.GetComponent<GearItem>();
                 if (GI != null)
                 {
@@ -6822,7 +6858,6 @@ namespace SkyCoop
                     {
                         _DisName = Localization.Get(extra.m_ExpeditionNote);
                     }
-                    
                 }
 
                 if (obj.GetComponent<Bed>() != null)
@@ -6833,6 +6868,13 @@ namespace SkyCoop
                         _FakeBed = true;
                     }
                 }
+                if (obj.GetComponent<Scent>() != null)
+                {
+                    IsDecoy = true;
+                    DecoyRange = obj.GetComponent<Scent>().m_ScentCategory;
+                }
+
+
                 if (obj.GetComponent<KeroseneLampItem>() != null)
                 {
                     if (extra.m_Variant == 1)
@@ -6916,6 +6958,32 @@ namespace SkyCoop
                     {
                         obj.AddComponent<Comps.FakeBed>();
                     }
+
+                    if (IsDecoy)
+                    {
+                        GameObject DecoyReference = GetGearItemObject("GEAR_SCDecoy");
+                        if (DecoyReference)
+                        {
+                            GameObject DecoyDummy = UnityEngine.Object.Instantiate<GameObject>(DecoyReference, v3, rot);
+                            if (DecoyDummy)
+                            {
+                                DGD.m_DecoyDummy = DecoyDummy.GetComponent<GearItem>();
+                                if (DGD.m_DecoyDummy.m_Scent == null)
+                                {
+                                    DGD.m_DecoyDummy.m_Scent = DecoyDummy.AddComponent<Scent>();
+                                    DecoyDummy.GetComponent<BoxCollider>().enabled = false;
+                                }
+                                DGD.m_DecoyDummy.m_Scent.m_ScentCategory = DecoyRange;
+
+                                FakeDecoy FakeDecoy = DecoyDummy.AddComponent<FakeDecoy>();
+                                FakeDecoy.m_DropGearDummy = DGD;
+
+                                GearManager.MaybeAddToDroppedDecoys(DGD.m_DecoyDummy);
+                                MelonLogger.Msg(ConsoleColor.Cyan, "Gear prefab with name " + gearName + " registered as decoy");
+                            }
+                        }
+                    }
+
                     obj.SetActive(true);
                     DroppedGearsObjs.Add(Hash, obj);
                 } else
@@ -7062,6 +7130,11 @@ namespace SkyCoop
                 GameManager.GetPlayerManagerComponent().StartPlaceMesh(newGear, PlaceMeshFlags.None);
                 DroppedGearsObjs.Remove(SearchKey);
                 TrackableDroppedGearsObjs.Remove(SearchKey);
+                if (obj.GetComponent<Comps.DroppedGearDummy>().m_DecoyDummy != null)
+                {
+                    GearManager.RemovedFromDroppedDecoys(obj.GetComponent<Comps.DroppedGearDummy>().m_DecoyDummy);
+                    UnityEngine.Object.Destroy(obj.GetComponent<Comps.DroppedGearDummy>().m_DecoyDummy.gameObject);
+                }
                 UnityEngine.Object.Destroy(obj);
                 ServerSend.PICKDROPPEDGEAR(0, SearchKey, true);
             } else {
@@ -7288,6 +7361,11 @@ namespace SkyCoop
 
                 DroppedGearsObjs.Remove(SearchKey);
                 TrackableDroppedGearsObjs.Remove(SearchKey);
+                if (obj.GetComponent<Comps.DroppedGearDummy>().m_DecoyDummy != null)
+                {
+                    GearManager.RemovedFromDroppedDecoys(obj.GetComponent<Comps.DroppedGearDummy>().m_DecoyDummy);
+                    UnityEngine.Object.Destroy(obj.GetComponent<Comps.DroppedGearDummy>().m_DecoyDummy.gameObject);
+                }
                 UnityEngine.Object.Destroy(obj);
                 ServerSend.PICKDROPPEDGEAR(0, SearchKey, true);
             } else {
@@ -7303,11 +7381,20 @@ namespace SkyCoop
             {
                 DroppedGearsObjs.Remove(Hash);
                 TrackableDroppedGearsObjs.Remove(Hash);
+                if (gearObj.GetComponent<Comps.DroppedGearDummy>().m_DecoyDummy != null)
+                {
+                    GearManager.RemovedFromDroppedDecoys(gearObj.GetComponent<Comps.DroppedGearDummy>().m_DecoyDummy);
+                    UnityEngine.Object.Destroy(gearObj.GetComponent<Comps.DroppedGearDummy>().m_DecoyDummy.gameObject);
+                }
                 UnityEngine.Object.Destroy(gearObj);
             }
-            if (!MyMod.DedicatedServerAppMode && players[Picker] != null && players[Picker].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
+
+            if(Picker != -1)
             {
-                players[Picker].GetComponent<Comps.MultiplayerPlayerAnimator>().Pickup();
+                if (!MyMod.DedicatedServerAppMode && players[Picker] != null && players[Picker].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
+                {
+                    players[Picker].GetComponent<Comps.MultiplayerPlayerAnimator>().Pickup();
+                }
             }
         }
 
@@ -7535,7 +7622,7 @@ namespace SkyCoop
             SkillsManager Manager = GameManager.GetSkillsManager();
             if (Manager != null)
             {
-                return Manager.m_Skills[(int)CustomSkills.FirstAid].GetCurrentTierNumber()+1;
+                return GetCustomSkill(CustomSkills.FirstAid).GetCurrentTierNumber()+1;
             }
             return 1;
         }

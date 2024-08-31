@@ -1545,6 +1545,15 @@ namespace SkyCoop
                         __instance.m_ResearchItem.m_ReadAudio = "Play_ResearchBook";
                     }
                 }
+                if (__instance.name == "GEAR_SCDecoy")
+                {
+                    if (__instance.m_Scent == null)
+                    {
+                        __instance.m_Scent = __instance.gameObject.AddComponent<Scent>();
+                        __instance.m_Scent.m_ScentCategory = ScentRangeCategory.RAW_MEAT;
+                        __instance.GetComponent<BoxCollider>().enabled = false;
+                    }
+                }
                 //if (ExpeditionManager.IsClueGear(__instance.m_GearName))
                 //{
                 //    if (__instance.m_NarrativeCollectibleItem == null)
@@ -2097,7 +2106,8 @@ namespace SkyCoop
                 }
                 if (__instance != null && __instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() != null && __instance.gameObject.activeSelf == true)
                 {
-                    if (MyMod.iAmHost == true && MyMod.AnimalsController == true)
+                    Comps.AnimalUpdates au = __instance.gameObject.GetComponent<Comps.AnimalUpdates>();
+                    if (MyMod.AnimalsController == true || (au && au.m_MyControlled))
                     {
                         GameObject animal = __instance.gameObject;
                         //MelonLogger.Msg("Animal with GUID " + animal.GetComponent<ObjectGuid>().Get() + " used trigger with hash name " + id);
@@ -2153,6 +2163,174 @@ namespace SkyCoop
                 }
             }
         }
+
+        [HarmonyLib.HarmonyPatch(typeof(BaseAi), "DecimateCarcass")] // Sometime
+        private static class BaseAi_DecimateCarcass
+        {
+            internal static bool Prefix(BaseAi __instance, float hours)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                return false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(BaseAi), "ProcessInvestigateFood")] // Calls Sometimes
+        private static class BaseAi_ProcessInvestigateFood
+        {
+            internal static bool Prefix(BaseAi __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance != null && __instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() != null && __instance.gameObject.activeSelf == true)
+                {
+                    Comps.AnimalUpdates au = __instance.gameObject.GetComponent<Comps.AnimalUpdates>();
+                    if (MyMod.AnimalsController == true || (au && au.m_MyControlled))
+                    {
+                        if (__instance.m_InvestigateFoodObject == null)
+                        {
+                            __instance.ReturnToDefaultBehavior();
+                        } else
+                        {
+                            GearItem Gi = __instance.m_InvestigateFoodObject.GetComponent<GearItem>();
+                            if (Gi == null)
+                                __instance.ReturnToDefaultBehavior();
+                            else if ((double)GameManager.GetFireManagerComponent().GetDistanceToClosestFire(Gi.transform.position) < (double)__instance.m_InvestigateFoodAvoidFireDistance)
+                                __instance.ReturnToDefaultBehavior();
+                            else if (GameManager.GetPlayerAnimationComponent().IsAiming() && __instance.IsPlayerFacingAi())
+                                __instance.ReturnToDefaultBehavior();
+                            else if ((double)Utils.XZDistance(GameManager.GetPlayerTransform().position, __instance.m_CachedTransform.position) < (double)__instance.m_MaxPlayerApproachDistanceToInvestigateFood)
+                                __instance.ReturnToDefaultBehavior();
+                            else if (Gi.m_InPlayerInventory) // Not gonna happend in Sky Co-op
+                            {
+                                __instance.ReturnToDefaultBehavior(); 
+                            } else
+                            {
+                                bool flag = __instance.CloseEnoughToEatObject(__instance.m_InvestigateFoodObject);
+                                if (flag)
+                                    __instance.MoveAgentStop();
+                                else
+                                    flag = __instance.m_MoveAgent.HasReachedDestination();
+                                if (!flag && !__instance.m_MoveAgent.HasPath())
+                                    __instance.ReturnToDefaultBehavior();
+                                else if (flag)
+                                {
+                                    FakeDecoy Decoy = Gi.gameObject.GetComponent<FakeDecoy>();
+                                    if (Gi && Decoy)
+                                    {
+                                        DroppedGearDummy DGD = Decoy.m_DropGearDummy;
+
+                                        if (DGD)
+                                        {
+                                            if (MyMod.iAmHost == true)
+                                            {
+                                                Shared.AnimalDestoryGear(DGD.m_SearchKey, MyMod.level_guid);
+                                            }
+                                            if (MyMod.sendMyPosition == true)
+                                            {
+                                                using (Packet _packet = new Packet((int)ClientPackets.ANIMALDESTORYGEAR))
+                                                {
+                                                    _packet.Write(DGD.m_SearchKey);
+                                                    _packet.Write(MyMod.level_guid);
+                                                    SendTCPData(_packet);
+                                                }
+                                            }
+                                        }
+        
+                                        GearManager.DestroyGearObject(Gi.gameObject);
+                                        __instance.m_CurrentTarget = GameManager.GetPlayerManagerComponent().m_AiTarget;
+                                        __instance.m_SuppressFleeAudio = true;
+                                        __instance.m_UseRetreatSpeedInFlee = true;
+                                        __instance.SetAiMode(AiMode.Flee);
+                                    } else
+                                        __instance.ReturnToDefaultBehavior();
+                                } else if (__instance.m_CurrentTarget == null)
+                                    __instance.MaybeClearTarget();
+                                else
+                                    __instance.ScanForNewTarget();
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(BaseAi), "SetBestFeedingTarget")] // Calls Sometimes
+        private static class BaseAi_SetBestFeedingTarget
+        {
+            internal static bool Prefix(BaseAi __instance, Vector3 feederPos)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance != null && __instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() != null && __instance.gameObject.activeSelf == true)
+                {
+                    Comps.AnimalUpdates au = __instance.gameObject.GetComponent<Comps.AnimalUpdates>();
+                    if (MyMod.AnimalsController == true || (au && au.m_MyControlled))
+                    {
+                        float num1 = float.PositiveInfinity;
+                        BaseAi baseAi1 = null;
+                        for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
+                        {
+                            BaseAi baseAi2 = BaseAiManager.m_BaseAis[index];
+                            if (baseAi2 && baseAi2.gameObject.activeSelf && baseAi2.m_BodyHarvest && baseAi2.m_BodyHarvest.enabled)
+                            {
+                                float num2 = Utils.DistanceSqr(feederPos, baseAi2.m_CachedTransform.position);
+                                if ((double)num2 < (double)num1)
+                                {
+                                    num1 = num2;
+                                    baseAi1 = baseAi2;
+                                }
+                            }
+                        }
+                        if (baseAi1 != null && (double)num1 <= (double)Utils.Sqr(5f))
+                        {
+                            __instance.m_TargetBaseAi = baseAi1;
+                            __instance.m_TargetBodyHarvest = ((Component)baseAi1).GetComponent<BodyHarvest>();
+                        } else
+                        {
+                            if (GameManager.m_BodyHarvestManager)
+                            {
+                                BodyHarvest BH1 = null;
+                                float num1_ = float.PositiveInfinity;
+                                for (int i = 0; i < BodyHarvestManager.m_BodyHarvestList.Count; i++)
+                                {
+                                    BodyHarvest BH2 = BodyHarvestManager.m_BodyHarvestList[i];
+                                    if (BH2 && BH2.gameObject.activeSelf && BH2.enabled && BH2.gameObject.GetComponent<AnimalCorpseObject>())
+                                    {
+                                        float num2_ = Utils.DistanceSqr(feederPos, BH2.transform.position);
+                                        if ((double)num2_ < (double)num1_)
+                                        {
+                                            num1_ = num2_;
+                                            BH1 = BH2;
+                                        }
+                                    }
+                                }
+                                if(BH1 != null && (double)num1_ <= (double)Utils.Sqr(5f))
+                                {
+                                    __instance.m_TargetBodyHarvest = BH1;
+                                    MelonLogger.Msg(ConsoleColor.DarkMagenta, "Animal found feeding target that is AnimalCorpseObject");
+                                }
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+        }
+
         //[HarmonyLib.HarmonyPatch(typeof(BaseAi), "Stun")] // Once
         //private static class BaseAi_Stun
         //{
@@ -7073,6 +7251,18 @@ namespace SkyCoop
         //    }
         //}
 
+        [HarmonyLib.HarmonyPatch(typeof(GearItem), "Deserialize")]
+        public class GearItem_Deserialize
+        {
+            public static void Postfix(GearItem __instance, string text, bool applyPositioningFix = true)
+            {
+                if(__instance.m_GearName == "GEAR_SCDecoy" && !string.IsNullOrEmpty(text))
+                {
+                    UnityEngine.Object.Destroy(__instance.gameObject);
+                }
+            }
+        }
+
 
         //[HarmonyLib.HarmonyPatch(typeof(GearItem), "Deserialize")]
         //public class GearItem_LoadDebug
@@ -9127,17 +9317,23 @@ namespace SkyCoop
                         {
                             __instance.m_SkillProgressBar.gameObject.SetActive(true);
                             __instance.m_SkillLevelLabel.transform.parent.gameObject.SetActive(true);
+                            //MelonLogger.Msg("(RefreshReadPanel) __instance.m_GearItem.m_ResearchItem.m_SkillType " + __instance.m_GearItem.m_ResearchItem.m_SkillType);
+                            //MelonLogger.Msg("(RefreshReadPanel) (int)__instance.m_SkillType " + (int)__instance.m_GearItem.m_ResearchItem.m_SkillType);
+                            //MelonLogger.Msg("(RefreshReadPanel) (CustomSkills)(int)__instance.m_SkillType " + (CustomSkills)(int)__instance.m_GearItem.m_ResearchItem.m_SkillType);
 
-                            Skill skill = GameManager.GetSkillsManager().GetSkillFromIndex((int)__instance.m_GearItem.m_ResearchItem.m_SkillType);
+                            Skill skill = GetSkillByType(GameManager.m_SkillsManager, __instance.m_GearItem.m_ResearchItem.m_SkillType);
                             if (skill)
                             {
+                                //MelonLogger.Msg("(RefreshReadPanel) skill.m_DisplayName " + skill.m_DisplayName);
                                 __instance.m_SkillProgressBarLabel.text = skill.m_DisplayName;
                                 __instance.m_SkillLevelLabel.text = (skill.GetCurrentTierNumber() + 1).ToString();
                                 __instance.m_SkillProgressBar.value = skill.GetProgressToNextLevelAsNormalizedValue(0);
-                                if (__instance.m_GearItem.m_ResearchItem.IsResearchComplete())
-                                    __instance.m_SkillProgressBarSprite.fillAmount = 0.0f;
-                                else
-                                    __instance.m_SkillProgressBarSprite.fillAmount = skill.GetProgressToNextLevelAsNormalizedValue(__instance.m_GearItem.m_ResearchItem.m_SkillPoints);
+                                //MelonLogger.Msg("(RefreshReadPanel) skill.GetProgressToNextLevelAsNormalizedValue(0) " + skill.GetProgressToNextLevelAsNormalizedValue(0));
+                                //MelonLogger.Msg("(RefreshReadPanel) __instance.m_SkillProgressBar.value " + __instance.m_SkillProgressBar.value);
+                                __instance.m_SkillProgressBarSprite.fillAmount = skill.GetProgressToNextLevelAsNormalizedValue(__instance.m_GearItem.m_ResearchItem.m_SkillPoints);
+
+                                //MelonLogger.Msg("(RefreshReadPanel) skill.GetProgressToNextLevelAsNormalizedValue(__instance.m_GearItem.m_ResearchItem.m_SkillPoints) " + skill.GetProgressToNextLevelAsNormalizedValue(__instance.m_GearItem.m_ResearchItem.m_SkillPoints));
+                                //MelonLogger.Msg("(RefreshReadPanel) __instance.m_SkillProgressBarSprite.fillAmount " + __instance.m_SkillProgressBarSprite.fillAmount);
                             }
                         }
                     }
@@ -9153,10 +9349,10 @@ namespace SkyCoop
                 //MelonLogger.Msg("(GetSkillNameLocalized) __instance.m_SkillType "+ __instance.m_SkillType);
                 //MelonLogger.Msg("(GetSkillNameLocalized) (int)__instance.m_SkillType " + (int)__instance.m_SkillType);
 
-                if ((int)__instance.m_SkillType >= MyMod.CustomSkillsStart)
+                if ((int)__instance.m_SkillType > MyMod.CustomSkillsStart)
                 {
-                    //MelonLogger.Msg("(GetSkillNameLocalized) (CustomSkills)__instance.m_SkillType " + (CustomSkills)__instance.m_SkillType);
-                    Skill skill = GameManager.GetSkillsManager().GetSkillFromIndex((int)__instance.m_SkillType);
+                    //MelonLogger.Msg("(GetSkillNameLocalized) (CustomSkills)(int)__instance.m_SkillType " + (CustomSkills)(int)__instance.m_SkillType);
+                    Skill skill = GetCustomSkill((CustomSkills)(int)__instance.m_SkillType);
                     if(skill != null) 
                     {
                         //MelonLogger.Msg("(GetSkillNameLocalized) skill.m_DisplayName " + skill.m_DisplayName);
@@ -9168,18 +9364,33 @@ namespace SkyCoop
         [HarmonyLib.HarmonyPatch(typeof(SkillsManager), "GetSkill")]
         private static class SkillsManager_GetSkill
         {
-            private static void Postfix(SkillsManager __instance, SkillType skillType, Skill __result)
+            private static void Postfix(SkillsManager __instance, SkillType skillType, ref Skill __result)
             {
-                if ((int)skillType >= MyMod.CustomSkillsStart)
+                //MelonLogger.Msg("(GetSkill) skillType " + skillType);
+                //MelonLogger.Msg("(GetSkill) (int)skillType " + (int)skillType);
+                if ((int)skillType > MyMod.CustomSkillsStart)
                 {
-                    Skill skill = GameManager.GetSkillsManager().GetSkillFromIndex((int)skillType);
+                    //MelonLogger.Msg("(GetSkill) (CustomSkills)(int)skillType " + (CustomSkills)(int)skillType);
+                    Skill skill = GetCustomSkill((CustomSkills)(int)skillType);
                     if (skill != null)
                     {
-                        MelonLogger.Msg("(SkillsManager.GetSkill) skill.m_DisplayName " + skill.m_DisplayName);
+                        //MelonLogger.Msg("(GetSkill) skill.m_DisplayName " + skill.m_DisplayName);
                         __result = skill;
                     }
                 }
             }
+        }
+
+        public static Skill GetSkillByType(SkillsManager __instance, SkillType skillType)
+        {
+            foreach (Skill skill in __instance.m_Skills)
+            {
+                if((int)skill.m_SkillType == (int)skillType)
+                {
+                    return skill;
+                }
+            }
+            return null;
         }
 
         [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "OnRead")]
@@ -9200,26 +9411,6 @@ namespace SkyCoop
                             __instance.StartRead(__instance.m_HoursToRead * 60, __instance.m_GearItem.m_ResearchItem.m_ReadAudio);
                         }
                         return false;
-                    }else if(__instance.m_GearItem.m_GearName == "GEAR_SCFirstAidBook")
-                    {
-                        //if (__instance.m_GearItem.m_ResearchItem.IsResearchComplete())
-                        //{
-                        //    GameAudioManager.PlayGUIError();
-                        //    HUDMessage.AddMessage(Localization.Get("GAMEPLAY_ResearchAlreadyCompleted"));
-                        //} else if (__instance.m_GearItem.m_ResearchItem.NoBenefitAtCurrentSkillLevel())
-                        //{
-                        //    GameAudioManager.PlayGUIError();
-                        //    HUDMessage.AddMessage(Localization.Get("GAMEPLAY_SkillTooAdvancedToBenefit"));
-                        //    __instance.m_GearItem.m_ResearchItem.MarkAsRead();
-                        //} else if (__instance.MaybeAbortReadingWithHUDMessage())
-                        //{
-                        //    GameAudioManager.PlayGUIError();
-                        //} else
-                        //{
-                        //    GameAudioManager.PlayGuiConfirm();
-                        //    __instance.StartRead(__instance.m_HoursToRead * 60, __instance.m_GearItem.m_ResearchItem.m_ReadAudio);
-                        //}
-                        //return false;
                     }
                 }
                 return true;

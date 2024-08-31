@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnhollowerBaseLib;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
 using UnityEngine.SceneManagement;
@@ -16,11 +17,14 @@ namespace SkyCoop
         public static GameObject m_CurrentRefMan = null;
         public static bool m_SeenRefMan = false;
         public static bool m_Insanity = false;
+        public static bool m_Nightmares = false;
 
         public static float m_CurrentSanity = 300;
         public static float m_PreviousSanity = 300;
         public static float m_MaxSanity = 300;
         public static bool m_GoingTriggerNightmare = false;
+        public static bool m_KickedOut = false;
+        public static bool m_EnterInDoor = false;
 
         public static float m_DaySanityRegeneration = 0.2f;
         public static float m_NightSanityDecrease = 0.23f;
@@ -32,10 +36,11 @@ namespace SkyCoop
         public static string m_TransitionDataBackup = "";
 
 
-        public static string m_PreNightmareScene = "";
-        public static string m_PreNightmareSceneWithGUID = "";
-        public static Vector3 m_PreNightmarePosition = Vector3.zero;
-        
+        public static string m_PreNightmareOutDoorScene = "";
+        public static string m_PreNightmareOutDoorEnterPoint = "";
+        public static string m_PreNightmareInDoorScene = "";
+        public static string m_PreNightmareInDoorSceneWithGUID = "";
+
         public static bool m_Debug = false;
         public static List<string> m_ScaryScenes = new List<string>()
         {
@@ -59,7 +64,7 @@ namespace SkyCoop
         {
             if(IsNight() && m_CurrentSanity < 10)
             {
-                //m_GoingTriggerNightmare = true;
+                m_GoingTriggerNightmare = true;
             }
         }
 
@@ -150,22 +155,82 @@ namespace SkyCoop
                 MayHearingHallucination();
             }
 
-            if(m_GoingTriggerNightmare)
+            if (m_Nightmares)
             {
-                if(m_CurrentSanity > 10)
+                if (m_GoingTriggerNightmare)
                 {
-                    m_GoingTriggerNightmare = false;
-                } else if(GameManager.GetRestComponent() && GameManager.GetRestComponent().m_NumSecondsSleeping > 50)
+                    if (GameManager.IsOutDoorsScene(GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent))
+                    {
+                        if (m_KickedOut)
+                        {
+                            m_KickedOut = false;
+                            if (m_CurrentSanity > 10)
+                            {
+                                m_GoingTriggerNightmare = false;
+                                TriggerNightmare();
+                            }
+                        }
+                    } else
+                    {
+                        if (GameManager.GetRestComponent() && GameManager.GetRestComponent().m_NumSecondsSleeping > 50)
+                        {
+                            Il2CppArrayBase<LoadScene> Doors = LoadScene.FindObjectsOfType<LoadScene>();
+                            foreach (LoadScene Door in Doors)
+                            {
+                                if (GameManager.IsOutDoorsScene(Door.m_SceneToLoad))
+                                {
+                                    Door.m_SoundDuringFadeIn = "";
+                                    m_PreNightmareOutDoorEnterPoint = Door.m_ExitPointName;
+                                    m_PreNightmareOutDoorScene = Door.m_SceneToLoad;
+                                    m_PreNightmareInDoorScene = MyMod.level_name;
+                                    m_PreNightmareInDoorSceneWithGUID = MyMod.level_guid;
+                                    m_KickedOut = true;
+                                    Door.LoadLevelWhenFadeOutComplete();
+                                }
+                            }
+                        }
+                    }
+                } else if (m_EnterInDoor)
                 {
-                    m_GoingTriggerNightmare = false;
-                    TriggerNightmare();
+                    if (GameManager.IsOutDoorsScene(GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent))
+                    {
+                        Il2CppArrayBase<LoadScene> Doors = LoadScene.FindObjectsOfType<LoadScene>();
+                        foreach (LoadScene Door in Doors)
+                        {
+                            bool IsValidDoor = false;
+                            if (!GameManager.IsOutDoorsScene(Door.m_SceneToLoad))
+                            {
+                                if (string.IsNullOrEmpty(Door.m_GUID))
+                                {
+                                    if (Door.m_SceneToLoad == m_PreNightmareInDoorSceneWithGUID)
+                                    {
+                                        IsValidDoor = true;
+                                    }
+                                } else
+                                {
+                                    string SceneWithGUID = Door.m_SceneToLoad + "_" + Door.m_GUID;
+                                    if (SceneWithGUID == m_PreNightmareInDoorSceneWithGUID)
+                                    {
+                                        IsValidDoor = true;
+                                    }
+                                }
+
+                                if (IsValidDoor)
+                                {
+                                    Door.m_SoundDuringFadeIn = "";
+                                    m_EnterInDoor = false;
+                                    Door.Activate();
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            if(MyMod.level_name == "BearCave")
-            {
-                if(m_CurrentSanity > 50)
+                if (MyMod.level_name == "BearCave")
                 {
-                    FinishNightmare();
+                    if (m_CurrentSanity > 50)
+                    {
+                        FinishNightmare();
+                    }
                 }
             }
         }
@@ -219,12 +284,17 @@ namespace SkyCoop
             }
         }
 
-        public static void MaySpawnRefMan(float chanceOverride = 0.005f)
+        public static void MaySpawnRefMan(float chanceOverride = 0.005f, bool NoRestrictions = false)
         {
             System.Random RNG = new System.Random();
-            if (GameManager.m_TimeOfDay != null && GameManager.m_TimeOfDay.IsNight() && RNG.NextDouble() < chanceOverride)
+            bool Luck = RNG.NextDouble() < chanceOverride;
+
+            if (Luck)
             {
-                SpawnRefMan();
+                if(NoRestrictions || (GameManager.m_TimeOfDay != null && GameManager.m_TimeOfDay.IsNight()))
+                {
+                    SpawnRefMan();
+                }
             }
         }
 
@@ -315,42 +385,46 @@ namespace SkyCoop
 
         public static void TriggerNightmare()
         {
-            //string OutDoorToLoad = "BearCave";
-            //GameObject DummyLoader = new GameObject();
-            //LoadScene Loader = DummyLoader.AddComponent<LoadScene>();
+            if (m_Nightmares)
+            {
+                //string OutDoorToLoad = "BearCave";
+                //GameObject DummyLoader = new GameObject();
+                //LoadScene Loader = DummyLoader.AddComponent<LoadScene>();
+                //
+                //Loader.m_SceneToLoad = OutDoorToLoad;
+                //Loader.Activate();
 
-            //Loader.m_SceneToLoad = OutDoorToLoad;
-            //Loader.Activate();
-            
-            m_TransitionDataBackup = Utils.SerializeObject(GameManager.m_SceneTransitionData);
+                m_TransitionDataBackup = Utils.SerializeObject(GameManager.m_SceneTransitionData);
 
-            string sceneToLoad = "BearCave";
-            GameManager.m_SceneTransitionData.m_SpawnPointName = "DefaultSpawnPoint";
-            GameManager.m_SceneTransitionData.m_SpawnPointAudio = "";
-            GameManager.m_SceneTransitionData.m_ForceSceneOnNextNavMapLoad = "";
-            GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene = "";
-            GameManager.m_SceneTransitionData.m_SceneLocationLocIDToShow = "";
-            m_PreNightmareScene = MyMod.level_name;
-            m_PreNightmareSceneWithGUID = MyMod.level_guid;
-            m_PreNightmarePosition = GameManager.GetPlayerTransform().position;
-            GameManager.LoadScene(sceneToLoad, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
+                string sceneToLoad = "BearCave";
+                GameManager.m_SceneTransitionData.m_SpawnPointName = "DefaultSpawnPoint";
+                GameManager.m_SceneTransitionData.m_SpawnPointAudio = "";
+                GameManager.m_SceneTransitionData.m_ForceSceneOnNextNavMapLoad = "";
+                GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene = "";
+                GameManager.m_SceneTransitionData.m_SceneLocationLocIDToShow = "";
+                GameManager.LoadScene(sceneToLoad, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
+            }
         }
 
 
         public static void FinishNightmare()
         {
-            GameManager.m_SceneTransitionData.m_SpawnPointName = "";
-            GameManager.m_SceneTransitionData.m_SpawnPointAudio = "";
-            GameManager.m_SceneTransitionData.m_ForceSceneOnNextNavMapLoad = "";
-            GameManager.m_SceneTransitionData.m_SceneLocationLocIDToShow = "";
+            //GameManager.m_SceneTransitionData.m_SpawnPointName = m_PreNightmareOutDoorEnterPoint;
+            //GameManager.m_SceneTransitionData.m_SpawnPointAudio = "";
+            //GameManager.m_SceneTransitionData.m_ForceSceneOnNextNavMapLoad = "";
+            //GameManager.m_SceneTransitionData.m_SceneLocationLocIDToShow = "";
 
-            GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene = m_PreNightmareSceneWithGUID;
+            //GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene = m_PreNightmareOutDoorScene;
 
-            GameManager.GetPlayerManagerComponent().m_DoTeleportAfterSceneLoad = true;
-            GameManager.GetPlayerManagerComponent().m_TeleportPending = true;
-            GameManager.GetPlayerManagerComponent().m_TeleportPendingPosition = m_PreNightmarePosition;
+            //GameManager.LoadScene(m_PreNightmareOutDoorScene, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
 
-            GameManager.LoadScene(m_PreNightmareScene, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
+            m_EnterInDoor = true;
+            GameObject DummyLoader = new GameObject();
+            LoadScene Loader = DummyLoader.AddComponent<LoadScene>();
+            
+            Loader.m_SceneToLoad = m_PreNightmareOutDoorScene;
+            Loader.m_ExitPointName = m_PreNightmareOutDoorEnterPoint;
+            Loader.Activate();
         }
     }
 }

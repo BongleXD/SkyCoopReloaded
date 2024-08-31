@@ -472,6 +472,7 @@ namespace GameServer
             { (int)ServerPackets.REQUESTEXPEDITIONSPROGRESS, ClientHandle.REQUESTEXPEDITIONSPROGRESS},
             { (int)ServerPackets.REGISTERSPEICALITEM, ClientHandle.REGISTERSPEICALITEM},
             { (int)ServerPackets.REQUESTSPECIALITEMS, ClientHandle.REQUESTSPECIALITEMS},
+            { (int)ServerPackets.ANIMALSTOPSFEEDING, ClientHandle.ANIMALSTOPSFEEDING},
         };
             MelonLogger.Msg("Initialized packets.");
         }

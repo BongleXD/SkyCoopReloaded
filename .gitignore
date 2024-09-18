@@ -16,3 +16,10 @@
 /.vs/SkyCoop/FileContentIndex/21446d54-1b42-4ff8-9b99-e8e0dc7639ce.vsidx
 /.vs/SkyCoop/v17/.suo
 /.vs/SkyCoop/FileContentIndex
+/.vs
+/Output/Debug
+/SkyCoopClient/.vs/SkyCoopClient
+/SkyCoopClient/bin/Debug/net6.0
+/SkyCoopClient/obj
+/SkyCoopServer/bin/Debug/net6.0
+/SkyCoopServer/obj

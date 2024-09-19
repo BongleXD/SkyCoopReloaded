@@ -5,7 +5,7 @@ VisualStudioVersion = 17.7.34018.315
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SkyCoopClient", "SkyCoopClient\SkyCoopClient.csproj", "{01824E10-57D4-41EB-BEC3-9F53FE8A5EF3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyCoopServer", "SkyCoopServer\SkyCoopServer.csproj", "{E9138361-243A-4500-94A7-A3CC266D8F90}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SkyCoopServer", "SkyCoopServer\SkyCoopServer.csproj", "{E9138361-243A-4500-94A7-A3CC266D8F90}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

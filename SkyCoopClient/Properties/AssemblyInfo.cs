@@ -4,7 +4,7 @@ using System.Reflection;
 //This is a C# comment. Comments have no impact on compilation.
 
 [assembly: AssemblyTitle(BuildInfo.ModName)]
-[assembly: AssemblyCopyright($"Created by ModAuthor")]
+[assembly: AssemblyCopyright($"Created by {BuildInfo.ModAuthor}")]
 
 [assembly: AssemblyVersion(BuildInfo.ModVersion)]
 [assembly: AssemblyFileVersion(BuildInfo.ModVersion)]
@@ -15,11 +15,7 @@ using System.Reflection;
 
 internal static class BuildInfo
 {
-	internal const string ModName = "Name";
-	internal const string ModAuthor = "Author";
-	/// <summary>
-	/// Version numbers in C# are a set of 1 to 4 positive integers separated by periods.
-	/// Mods typically use 3 numbers. For example: 1.2.1
-	/// </summary>
+	internal const string ModName = "Sky Co-op";
+	internal const string ModAuthor = "Filigrani & REDcat";
 	internal const string ModVersion = "1.0.0";
 }

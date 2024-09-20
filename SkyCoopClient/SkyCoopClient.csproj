@@ -39,4 +39,7 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\SkyCoopServer\SkyCoopServer.csproj" />
 	</ItemGroup>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+	  <Exec Command="copy &quot;S:\source\SkyCoopReborn\Output\Debug\SkyCoopClient.dll&quot; &quot;D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopClient.dll&quot;&#xD;&#xA;copy &quot;S:\source\SkyCoopReborn\Output\Debug\SkyCoopServer.dll&quot; &quot;D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopServer.dll&quot;" />
+	</Target>
 </Project>

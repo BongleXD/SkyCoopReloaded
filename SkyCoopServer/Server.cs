@@ -5,37 +5,37 @@ namespace SkyCoopServer
 {
     public class GameServer
     {
-        public EventBasedNetListener ServerListener;
-        public NetManager Server;
-        public bool ServerIsStart = false;
+        public EventBasedNetListener m_Listener;
+        public NetManager m_Instance;
+        public bool m_IsReady = false;
 
         public GameServer()
         {
-            ServerListener = new EventBasedNetListener();
-            Server = new NetManager(ServerListener);
+            m_Listener = new EventBasedNetListener();
+            m_Instance = new NetManager(m_Listener);
         }
 
         public void StartServer(int port, int maxPlayers, string key = "key")
         {
             Console.WriteLine("Starting server");
-            Server.Start(port);
+            m_Instance.Start(port);
 
-            ServerListener.ConnectionRequestEvent += request =>
+            m_Listener.ConnectionRequestEvent += request =>
             {
-                if (Server.ConnectedPeersCount < maxPlayers)
+                if (m_Instance.ConnectedPeersCount < maxPlayers)
                     request.AcceptIfKey(key);
                 else
                     request.Reject();
             };
 
-            ServerListener.PeerConnectedEvent += peer =>
+            m_Listener.PeerConnectedEvent += peer =>
             {
                 Console.WriteLine("We got connection: {0}", peer);  // Show peer ip
                 NetDataWriter writer = new NetDataWriter();         // Create writer class
                 writer.Put("Hello client!");                        // Put some string
                 peer.Send(writer, DeliveryMethod.ReliableOrdered);  // Send with reliability
             };
-            ServerIsStart = true;
+            m_IsReady = true;
             Console.WriteLine($"Server is started port={port}");
         }
 

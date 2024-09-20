@@ -12,9 +12,9 @@ namespace SkyCoopServer
 
         public void Update()
         {
-            if (GameServer.ServerIsStart)
+            if (GameServer.m_IsReady)
             {
-                GameServer.Server.PollEvents();
+                GameServer.m_Instance.PollEvents();
             }
         }
     }

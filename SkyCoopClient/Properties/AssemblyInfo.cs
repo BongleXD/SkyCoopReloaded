@@ -15,7 +15,7 @@ using System.Reflection;
 
 internal static class BuildInfo
 {
-	internal const string ModName = "Sky Co-op";
+	internal const string ModName = "Sky Co-op REBORN";
 	internal const string ModAuthor = "Filigrani & REDcat";
 	internal const string ModVersion = "1.0.0";
 }

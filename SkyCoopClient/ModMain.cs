@@ -22,9 +22,9 @@ namespace SkyCoop
 
         public override void OnUpdate()
         {
-            if (Client != null && Client.ClientIsStart)
+            if (Client != null && Client.m_IsReady)
             {
-                Client.Client.PollEvents();
+                Client.m_Instance.PollEvents();
             }
 
             if(Server != null)

@@ -5,25 +5,25 @@ namespace SkyCoop
 {
     public class GameClient
     {
-        public EventBasedNetListener ClientListener;
-        public NetManager Client;
-        public bool ClientIsStart = false;
+        public EventBasedNetListener m_Listener;
+        public NetManager m_Instance;
+        public bool m_IsReady = false;
         public GameClient() 
         {
-            ClientListener = new EventBasedNetListener();
-            Client = new NetManager(ClientListener);
+            m_Listener = new EventBasedNetListener();
+            m_Instance = new NetManager(m_Listener);
         }
 
         public void ConnectToServer(string ip, int port, string key = "key")
         {
-            MelonLogger.Msg($"Connect to {ip}{port} with key: {key}");
+            Logger.Log($"Connect to {ip}{port} with key: {key}");
 
-            Client.Start();
-            Client.Connect(ip, port, key);
+            m_Instance.Start();
+            m_Instance.Connect(ip, port, key);
 
-            ClientListener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod, channel) =>
+            m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, deliveryMethod, channel) =>
             {
-                Console.WriteLine("We got: {0}", dataReader.GetString(100 /* max length of string */));
+                Logger.Log("We got: "+ dataReader.GetString(100 /* max length of string */));
                 dataReader.Recycle();
             };
         }

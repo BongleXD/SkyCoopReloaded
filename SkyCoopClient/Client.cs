@@ -44,6 +44,25 @@ namespace SkyCoop
         {
             m_Listener = new EventBasedNetListener();
             m_Instance = new NetManager(m_Listener);
+
+            m_Listener.NetworkErrorEvent += (fromPeer, error) =>
+            {
+                Logger.Log(ConsoleColor.Red, "Connection failed: " + error);
+                MenuHook.RemovePleaseWait();
+                MenuHook.DoOKMessage("Connection failed", error.ToString());
+                m_IsReady = false;
+                m_Instance.Stop();
+            };
+
+            m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
+            {
+                m_HostEndPoint = fromPeer;
+                int PacketID = dataReader.GetInt();
+
+                ExecutePacketEvent(PacketID, dataReader);
+
+                dataReader.Recycle();
+            };
         }
 
         public void SendToHost(NetDataWriter writer)
@@ -79,21 +98,12 @@ namespace SkyCoop
 
         public void ConnectToServer(string ip, int port, string key = "key")
         {
-            Logger.Log($"Connect to {ip}:{port} with key: {key}");
-
+            MenuHook.DoPleaseWait("Connecting...", "Trying to connect to "+ip+":"+port);
+            Logger.Log($"Trying to connect to {ip}:{port} with key: {key}");
+            Logger.Log("m_Instance.DisconnectTimeout "+ m_Instance.DisconnectTimeout);
             m_Instance.Start();
             m_Instance.Connect(ip, port, key);
             m_IsReady = true;
-
-            m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
-            {
-                m_HostEndPoint = fromPeer;
-                int PacketID = dataReader.GetInt();
-
-                ExecutePacketEvent(PacketID, dataReader);
-
-                dataReader.Recycle();
-            };
         }
     }
 }

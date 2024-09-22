@@ -300,5 +300,34 @@ namespace SkyCoop
                 }
             }
         }
+
+        public static void DoPleaseWait(string title, string text)
+        {
+            Panel_Confirmation Con = InterfaceManager.GetPanel<Panel_Confirmation>();
+            if (Con == null)
+            {
+                return;
+            }
+            Con.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, title, "\n" + text, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
+        }
+        public static void RemovePleaseWait()
+        {
+            Panel_Confirmation Con = InterfaceManager.GetPanel<Panel_Confirmation>();
+            if (Con == null)
+            {
+                return;
+            }
+            Con.OnCancel();
+        }
+
+        public static void DoOKMessage(string title, string txt)
+        {
+            Panel_Confirmation Con = InterfaceManager.GetPanel<Panel_Confirmation>();
+            if (Con == null)
+            {
+                return;
+            }
+            Con.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, title, "\n" + txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+        }
     }
 }

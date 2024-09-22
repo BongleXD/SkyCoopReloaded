@@ -3,6 +3,7 @@ using LiteNetLib.Utils;
 using MelonLoader;
 using System.Net;
 using SkyCoopServer;
+using MonoMod.Utils;
 
 namespace SkyCoop
 {
@@ -35,7 +36,7 @@ namespace SkyCoop
         public bool m_IsReady = false;
 
 
-        public Client() 
+        public Client()
         {
             m_Listener = new EventBasedNetListener();
             m_Instance = new NetManager(m_Listener);
@@ -47,6 +48,71 @@ namespace SkyCoop
                 MenuHook.DoOKMessage("Connection failed", error.ToString());
                 m_IsReady = false;
                 m_Instance.Stop();
+            };
+            m_Listener.NetworkLatencyUpdateEvent += (peer, ping) =>
+            {
+                //Logger.Log(ConsoleColor.Cyan, "Ping to host: " + ping);
+            };
+
+            m_Listener.PeerDisconnectedEvent += (peer, message) =>
+            {
+                Logger.Log(ConsoleColor.Red, "Disconnected: " + message.Reason);
+                Logger.Log(ConsoleColor.Red, message.AdditionalData);
+
+                if (peer.RemoteId == 0)
+                {
+                    string Message = "Unknown reason";
+
+                    if (message.Reason == DisconnectReason.RemoteConnectionClose)
+                    {
+                        //TODO: Print Host message
+                    } else
+                    {
+                        switch (message.Reason)
+                        {
+                            case DisconnectReason.ConnectionFailed:
+                                Message = "Wasn't able to connect to the server.";
+                                break;
+                            case DisconnectReason.Timeout:
+                                Message = "Disconnected doe timeout.";
+                                break;
+                            case DisconnectReason.HostUnreachable:
+                                Message = "Server is unreachable.";
+                                break;
+                            case DisconnectReason.NetworkUnreachable:
+                                Message = "Network is unreachable.";
+                                break;
+                            case DisconnectReason.RemoteConnectionClose:
+                                break;
+                            case DisconnectReason.DisconnectPeerCalled:
+                                Message = "Disconnected by my request.";
+                                break;
+                            case DisconnectReason.ConnectionRejected:
+                                break;
+                            case DisconnectReason.InvalidProtocol:
+                                Message = "Invalid connection protocol.";
+                                break;
+                            case DisconnectReason.UnknownHost:
+                                Message = "Unknown host.";
+                                break;
+                            case DisconnectReason.Reconnect:
+                                Message = "Reconnect";
+                                break;
+                            case DisconnectReason.PeerToPeerConnection:
+                                Message = "Peer to Peer Connection";
+                                break;
+                            case DisconnectReason.PeerNotFound:
+                                Message = "Peer not found.";
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    m_IsReady = false;
+                    m_Instance.Stop();
+                    MenuHook.RemovePleaseWait();
+                    MenuHook.DoOKMessage("Disconnected", Message);
+                }
             };
 
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>

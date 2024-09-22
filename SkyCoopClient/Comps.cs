@@ -1,6 +1,9 @@
-﻿using Il2CppInterop.Runtime.Injection;
+﻿
 using UnityEngine;
-
+using Il2CppCollections = Il2CppSystem.Collections.Generic;
+using Il2Cpp;
+using Il2CppInterop.Runtime.Attributes;
+using Il2CppInterop.Runtime.Injection;
 namespace SkyCoop
 {
     public class Comps
@@ -21,6 +24,8 @@ namespace SkyCoop
         {
             public UiButtonKeyboardPressSkip(IntPtr ptr) : base(ptr) { }
             public Il2CppSystem.Collections.Generic.List<Il2Cpp.EventDelegate> m_Click;
+            public Il2CppSystem.Collections.Generic.List<Il2Cpp.EventDelegate> m_DoubleClick;
+            public Il2CppSystem.Collections.Generic.List<Il2Cpp.EventDelegate> m_DoubleDoubleClick;
         }
     }
 }

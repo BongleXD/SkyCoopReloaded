@@ -56,6 +56,16 @@ namespace SkyCoopServer
                 Console.WriteLine("We got connection: {0}", peer+" assigned them as "+ peer.Id);
                 ServerSend.Welcome(peer, "Welcome client "+peer.Id);
             };
+
+            m_Listener.PeerDisconnectedEvent += (peer, message) =>
+            {
+                Console.WriteLine("Client", peer.Id + " disconnected " + message.Reason.ToString());
+            };
+
+            m_Listener.NetworkLatencyUpdateEvent += (peer, ping) =>
+            {
+                //Console.WriteLine("Ping to Client "+peer.Id+": " + ping);
+            };
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
             {
                 int PacketID = dataReader.GetInt();

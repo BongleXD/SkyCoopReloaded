@@ -21,7 +21,7 @@ namespace SkyCoop
         public static void Welcome()
         {
             //TODO: Send here MAC address and nick name.
-            
+
             string Message = "I am connected!";
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.Welcome);

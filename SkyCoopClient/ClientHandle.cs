@@ -18,7 +18,7 @@ namespace SkyCoop
             Logger.Log(ConsoleColor.Cyan,"Server welcomes me with message: "+ Message);
             ClientSend.Welcome();
             MenuHook.RemovePleaseWait();
-            MenuHook.DoOKMessage("Connected!", Message);
+            //MenuHook.DoOKMessage("Connected!", Message);
         }
     }
 }

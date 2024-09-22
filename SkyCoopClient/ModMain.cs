@@ -1,5 +1,6 @@
 ﻿using MelonLoader;
 using SkyCoopServer;
+using UnityEngine;
 
 namespace SkyCoop
 {
@@ -14,6 +15,14 @@ namespace SkyCoop
             Client = new Client();
         }
 
+        public static void SetAppBackgroundMode()
+        {
+            if (Application.runInBackground == false)
+            {
+                Application.runInBackground = true; // Always running in bg
+            }
+        }
+
         [Obsolete]
         public override void OnApplicationStart()
         {
@@ -22,6 +31,7 @@ namespace SkyCoop
 
         public override void OnUpdate()
         {
+            SetAppBackgroundMode();
             if (Client != null && Client.m_IsReady)
             {
                 Client.m_Instance.PollEvents();

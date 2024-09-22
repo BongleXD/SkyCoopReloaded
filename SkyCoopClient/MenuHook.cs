@@ -1,6 +1,7 @@
 ﻿using Il2Cpp;
 using MelonLoader;
 using UnityEngine;
+using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace SkyCoop
 {
@@ -188,15 +189,26 @@ namespace SkyCoop
                     Logger.Log("Clicked m_CustomId " + Hook.m_CustomId);
                     Logger.Log("Clicked m_PanelHandle " + Hook.m_PanelHandle);
 
-                    if(Hook.m_PanelHandle == "Panel_MainMenu" && Hook.m_CustomId == 3) // MULTIPLAYER MAIN MENU
+                    if(Hook.m_PanelHandle == "Panel_MainMenu") 
                     {
-                        ChangeMenuItems("Multiplayer");
-                        InterfaceManager.TrySetPanelEnabled<Panel_MainMenu>(false);
+                        if(Hook.m_CustomId == 3) // MULTIPLAYER MAIN MENU
+                        {
+                            ChangeMenuItems("Multiplayer");
+                            InterfaceManager.TrySetPanelEnabled<Panel_MainMenu>(false);
+                        }
+                    }else if(Hook.m_PanelHandle == "Panel_Sandbox")
+                    {
+                        if(Hook.m_CustomId == 1) // Host server
+                        {
+                            ModMain.Server.m_Server.StartServer();
+                            Thread.Sleep(15);
+                            ModMain.Client.ConnectToServer("localhost");
+                        } else if(Hook.m_CustomId == 2) // Join server
+                        {
+                            InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "INPUT SERVER ADDRESS", "127.0.0.1", Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                        }
                     }
                 }
-                //ModMain.Server.GameServer.StartServer(1111, 4);
-                //Thread.Sleep(15);
-                //ModMain.Client.ConnectToServer("localhost", 1111);
 
                 return true;
             }
@@ -237,6 +249,53 @@ namespace SkyCoop
                             Button.GetComponent<Comps.UiButtonPressHook>().m_CustomId = i;
                             Button.GetComponent<Comps.UiButtonPressHook>().m_PanelHandle = __instance.GetType().Name;
                         }
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Sandbox), "Update", null)]
+        public class Panel_Sandbox_Update
+        {
+            public static void Postfix(Panel_Sandbox __instance)
+            {
+                // RootMenu/Menu/Left_Align/Grid
+                // 0       /0   /6         /3
+                Transform Grid = __instance.gameObject.transform.GetChild(0).GetChild(0).GetChild(6).GetChild(3);
+                for (int i = 0; i <= 6; i++)
+                {
+                    GameObject Button = Grid.GetChild(i).gameObject;
+
+                    if (Button.GetComponent<UIButton>() != null)
+                    {
+                        if (Button.GetComponent<Comps.UiButtonPressHook>() == null)
+                        {
+                            Button.AddComponent<Comps.UiButtonPressHook>();
+                            Button.GetComponent<Comps.UiButtonPressHook>().m_CustomId = i;
+                            Button.GetComponent<Comps.UiButtonPressHook>().m_PanelHandle = __instance.GetType().Name;
+                        }
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Confirmation), "OnConfirm")]
+        private static class Panel_Confirmation_OnConfirm
+        {
+            internal static void Postfix(Panel_Confirmation __instance)
+            {
+                if (__instance.m_CurrentGroup != null)
+                {
+                    MelonLogger.Msg(ConsoleColor.Blue, "__instance.m_CurrentGroup");
+
+                    string Message = __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text;
+                    string text = __instance.m_CurrentGroup.m_InputField.GetText();
+                    MelonLogger.Msg(ConsoleColor.Blue, "__instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text " + Message);
+                    switch (Message)
+                    {
+                        case "INPUT SERVER ADDRESS":
+                            ModMain.Client.ConnectToServer(text);
+                            break;
+                        default:
+                            break;
                     }
                 }
             }

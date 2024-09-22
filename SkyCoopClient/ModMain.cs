@@ -6,12 +6,12 @@ namespace SkyCoop
     internal sealed class ModMain : MelonMod
     {
         public static ServerMain Server;
-        public static GameClient Client;
+        public static Client Client;
 
         public override void OnInitializeMelon()
         {
             Server = new ServerMain();
-            Client = new GameClient();
+            Client = new Client();
         }
 
         [Obsolete]
@@ -27,7 +27,7 @@ namespace SkyCoop
                 Client.m_Instance.PollEvents();
             }
 
-            if(Server != null)
+            if(Server != null && Server.m_Server.m_IsReady)
             {
                 Server.Update();
             }

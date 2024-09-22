@@ -3,18 +3,18 @@ namespace SkyCoopServer
 {
     public class ServerMain
     {
-        public GameServer GameServer;
+        public Server m_Server;
 
         public ServerMain()
         {
-            GameServer = new GameServer();
+            m_Server = new Server();
         }
 
         public void Update()
         {
-            if (GameServer.m_IsReady)
+            if (m_Server.m_IsReady)
             {
-                GameServer.m_Instance.PollEvents();
+                m_Server.m_Instance.PollEvents();
             }
         }
     }

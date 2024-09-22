@@ -13,7 +13,7 @@ namespace SkyCoopServer
         public static void Welcome(NetPeer Client, string Message)
         {
             NetDataWriter writer = new NetDataWriter();
-            writer.Put((int)Server.PacketType.Welcome);
+            writer.Put((int)Packet.Type.Welcome);
             writer.Put(Message.Length);
             writer.Put(Message);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);

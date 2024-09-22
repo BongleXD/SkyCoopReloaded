@@ -12,16 +12,10 @@ namespace SkyCoopServer
         public NetManager m_Instance;
         public bool m_IsReady = false;
 
-        public static readonly int s_PacketTypesCount = Enum.GetValues(typeof(PacketType)).Length;
-        public enum PacketType
-        {
-            Welcome,
-        }
-
         public delegate void PacketHandler(NetPeer Client, NetDataReader Reader);
         public static Dictionary<int, PacketHandler> s_packetHandlers = new Dictionary<int, PacketHandler>()
         {
-            { (int)PacketType.Welcome, ServerHandle.Welcome },
+            { (int)Packet.Type.Welcome, ServerHandle.Welcome },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

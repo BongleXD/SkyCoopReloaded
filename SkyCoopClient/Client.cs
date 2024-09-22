@@ -2,6 +2,7 @@
 using LiteNetLib.Utils;
 using MelonLoader;
 using System.Net;
+using SkyCoopServer;
 
 namespace SkyCoop
 {
@@ -11,16 +12,10 @@ namespace SkyCoop
         public static int m_LocalPort = 26951;
         public static int m_Protocol = 1;
 
-        public static readonly int s_PacketTypesCount = Enum.GetValues(typeof(PacketType)).Length;
-        public enum PacketType
-        {
-            Welcome,
-        }
-
         public delegate void PacketHandler(NetDataReader Reader);
         public static Dictionary<int, PacketHandler> s_packetHandlers = new Dictionary<int, PacketHandler>()
         {
-            { (int)PacketType.Welcome, ClientHandle.Welcome },
+            { (int)Packet.Type.Welcome, ClientHandle.Welcome },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

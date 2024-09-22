@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SkyCoopServer;
 
 namespace SkyCoop
 {
@@ -23,7 +24,7 @@ namespace SkyCoop
             
             string Message = "I am connected!";
             NetDataWriter writer = new NetDataWriter();
-            writer.Put((int)Client.PacketType.Welcome);
+            writer.Put((int)Packet.Type.Welcome);
             writer.Put(Message.Length);
             writer.Put(Message);
             SendToHost(writer);

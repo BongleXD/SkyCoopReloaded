@@ -6,24 +6,31 @@ namespace SkyCoopServer
     public class Server
     {
         public int m_Port = 26950;
-        public int m_MaxPlayers = 4;
 
+        public DataStr.ServerConfig m_Config = new DataStr.ServerConfig();
         public EventBasedNetListener m_Listener;
         public NetManager m_Instance;
         public bool m_IsReady = false;
 
-        public delegate void PacketHandler(NetPeer Client, NetDataReader Reader);
+        // Data Sync Instances
+        public PlayersDataManager m_PlayersData;
+
+
+        public delegate void PacketHandler(NetPeer Client, NetDataReader Reader, Server ServerInstance);
         public static Dictionary<int, PacketHandler> s_packetHandlers = new Dictionary<int, PacketHandler>()
         {
             { (int)Packet.Type.Welcome, ServerHandle.Welcome },
+            { (int)Packet.Type.ClientPosition, ServerHandle.ClientPosition },
+            { (int)Packet.Type.ClientRotation, ServerHandle.ClientRotation },
+            { (int)Packet.Type.ClientScene, ServerHandle.ClientScene },
         };
 
-        public static void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
+        public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
         {
             PacketHandler Handle;
             if (s_packetHandlers.TryGetValue(PacketID, out Handle))
             {
-                Handle(Client, Reader);
+                Handle(Client, Reader, this);
             }
         }
 
@@ -31,15 +38,45 @@ namespace SkyCoopServer
         {
             m_Listener = new EventBasedNetListener();
             m_Instance = new NetManager(m_Listener);
+
+            //TODO: Loading Config
+            m_Config = new DataStr.ServerConfig();
+
+            // Data Sync Instances
+            m_PlayersData = new PlayersDataManager(this);
+        }
+
+        public NetPeer GetClient(int Index)
+        {
+            if (m_Instance != null)
+            {
+                foreach (NetPeer Peer in m_Instance.ConnectedPeerList)
+                {
+                    if(Peer.Id == Index)
+                    {
+                        return Peer;
+                    }
+                }
+            }
+            return null;
+        }
+
+        public void Update()
+        {
+            if (m_Instance != null && m_IsReady)
+            {
+                m_Instance.PollEvents();
+            }
         }
 
         public void StartServer()
         {
-            StartServer(m_Port, m_MaxPlayers);
+            StartServer(m_Port, m_Config.m_MaxPlayers);
         }
 
         public void StartServer(int port, int maxPlayers, string key = "key")
         {
+            m_PlayersData.InitilizePlayers(maxPlayers);
             Console.WriteLine("Starting server");
             m_Instance.Start(port);
 

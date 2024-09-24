@@ -3,10 +3,7 @@ using Il2CppEasyRoads3Dv3;
 using Il2CppSystem.Xml.Serialization;
 using MelonLoader;
 using UnityEngine;
-using static Il2Cppgw.gql.Interpreter;
-using static Il2CppMono.Security.X509.X520;
-using static UnityEngine.ParticleSystem.PlaybackState;
-using static UnityEngine.UIElements.GenericDropdownMenu;
+using UnityEngine.AddressableAssets;
 
 namespace SkyCoop
 {
@@ -259,13 +256,13 @@ namespace SkyCoop
                         {
                             if (Hook.m_CustomId == 1) // Host server
                             {
-                                if (ModMain.Server.m_Server.m_IsReady)
+                                if (ModMain.Server.m_IsReady)
                                 {
                                     RemovePleaseWait();
                                     DoOKMessage("Server already up!", "You already hosting server!");
                                 } else
                                 {
-                                    ModMain.Server.m_Server.StartServer();
+                                    ModMain.Server.StartServer();
                                     Thread.Sleep(15);
                                     ModMain.Client.ConnectToServer("localhost");
                                     OpenSandbox();
@@ -395,6 +392,8 @@ namespace SkyCoop
             GameObject setting = NGUITools.AddChild(Tab.m_Tab, Prefab);
             setting.name = "Custom Setting (" + Name + ")";
 
+            setting.AddComponent<Comps.UiButtonSettingHook>();
+
             Transform labelTransform = setting.transform.Find(LableName);
             UnityEngine.Object.Destroy(labelTransform.GetComponent<UILocalize>());
             UILabel uiLabel = labelTransform.GetComponent<UILabel>();
@@ -512,6 +511,15 @@ namespace SkyCoop
                     UIPrefabs.Initialize(__instance);
                 }
                 CreateSkyCoopSettingsTab(__instance);
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(BootUpdate), "Start")]
+        internal static class InitializePatch
+        {
+            private static void Prefix()
+            {
+                ModMain.OnGameBoot();
             }
         }
 

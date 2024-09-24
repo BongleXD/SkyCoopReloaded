@@ -11,6 +11,10 @@ namespace SkyCoopServer
         public enum Type
         {
             Welcome = 0,
+            CFG,
+            ClientPosition,
+            ClientRotation,
+            ClientScene,
         }
     }
 }

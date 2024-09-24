@@ -17,6 +17,10 @@ namespace SkyCoop
         public static Dictionary<int, PacketHandler> s_packetHandlers = new Dictionary<int, PacketHandler>()
         {
             { (int)Packet.Type.Welcome, ClientHandle.Welcome },
+            { (int)Packet.Type.CFG, ClientHandle.ServerConfig },
+            { (int)Packet.Type.ClientPosition, ClientHandle.ClientPosition },
+            { (int)Packet.Type.ClientRotation, ClientHandle.ClientRotation },
+            { (int)Packet.Type.ClientScene, ClientHandle.ClientSceneNotification },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)
@@ -164,7 +168,6 @@ namespace SkyCoop
             Logger.Log("m_Instance.DisconnectTimeout "+ m_Instance.DisconnectTimeout);
             m_Instance.Start();
             m_Instance.Connect(ip, port, key);
-            m_IsReady = true;
         }
     }
 }

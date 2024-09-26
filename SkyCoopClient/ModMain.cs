@@ -32,11 +32,13 @@ namespace SkyCoop
         {
             Comps.RegisterComponents();
             AssetManager.PreloadMainBundle();
+            //AssetManager.DumpPrefabsList();
         }
 
         public static void OnGameBoot()
         {
             ReimplementConsole();
+            //AssetManager.DumpAddressablesContent();
         }
 
         public override void OnUpdate()

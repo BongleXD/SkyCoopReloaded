@@ -17,11 +17,17 @@ namespace SkyCoop
             public Vector3 m_LastSentPosition = Vector3.zero;
             public Quaternion m_LastSentRotation = Quaternion.identity;
             public string m_LastSentScene = "MainMenu";
+
+            public string m_GearName = "";
+            public int m_GearVariant = 0;
+
+            public bool m_LastSentCrouch = false;
+            public Comps.NetworkPlayer.Actions m_LastSentAction = Comps.NetworkPlayer.Actions.None;
         }
 
         public static Comps.NetworkPlayer CreatePlayer(int PlayerID)
         {
-            GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>("multiplayerPlayer");
+            GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>("SkyCoopPlayer");
 
             if(Reference)
             {
@@ -31,6 +37,8 @@ namespace SkyCoop
                     UnityEngine.Object.DontDestroyOnLoad(Player); // if scence change, this object won't be destroyed.
 
                     Comps.NetworkPlayer NP = Player.AddComponent<Comps.NetworkPlayer>();
+                    NP.m_Animator = Player.GetComponent<Animator>();
+                    NP.LoadEquipment();
 
                     NP.m_PlayerID = PlayerID;
 
@@ -81,6 +89,62 @@ namespace SkyCoop
             }
         }
 
+        public static Comps.NetworkPlayer.Actions GetCurrentAction()
+        {
+            Panel_BreakDown bk = InterfaceManager.GetPanel<Panel_BreakDown>();
+            if (bk && bk.IsBreakingDown())
+            {
+                return Comps.NetworkPlayer.Actions.Harvesting;
+            }
+            Panel_Diagnosis Diagnos = InterfaceManager.GetPanel<Panel_Diagnosis>();
+            if (Diagnos && Diagnos.TreatmentInProgress())
+            {
+                return Comps.NetworkPlayer.Actions.Harvesting;
+            }
+            Panel_BodyHarvest bh = InterfaceManager.GetPanel<Panel_BodyHarvest>();
+            if(bh && bh.m_BodyHarvest)
+            {
+                return Comps.NetworkPlayer.Actions.Harvesting;
+            }
+            PlayerManager PM = GameManager.GetPlayerManagerComponent();
+            if (PM.ActiveInteraction != null && PM.ActiveInteraction.GetInteractiveObject().GetComponent<HarvestableInteraction>())
+            {
+                return Comps.NetworkPlayer.Actions.Harvesting;
+            }
+
+            PlayerControlMode CMode = PM.GetControlMode();
+            if (CMode == PlayerControlMode.AimRevolver)
+            {
+                return Comps.NetworkPlayer.Actions.PistolAim;
+            }
+            if(CMode == PlayerControlMode.StartingFire)
+            {
+                return Comps.NetworkPlayer.Actions.Igniting;
+            }
+            if(CMode == PlayerControlMode.DeployRope || CMode == PlayerControlMode.TakeRope)
+            {
+                return Comps.NetworkPlayer.Actions.Harvesting;
+            }
+            if (PM.m_ItemInHands)
+            {
+                if(PM.m_ItemInHands.name == "GEAR_Rifle")
+                {
+                    if (PM.m_ItemInHands.m_GunItem.IsAiming())
+                    {
+                        return Comps.NetworkPlayer.Actions.RifleAim;
+                    }
+                }else if(PM.m_ItemInHands.name == "GEAR_FlareGun")
+                {
+                    if (PM.m_ItemInHands.m_GunItem.IsAiming())
+                    {
+                        return Comps.NetworkPlayer.Actions.PistolAim;
+                    }
+                }
+            }
+
+            return Comps.NetworkPlayer.Actions.None;
+        }
+
         public static void UpdateLocalPlayer()
         {
             if(!GameManager.s_IsGameplaySuspended)
@@ -100,6 +164,28 @@ namespace SkyCoop
                         {
                             m_LocalPlayerData.m_LastSentRotation = T.rotation;
                             ClientSend.SendRotation(T.rotation);
+                        }
+                        PlayerManager PM = GameManager.GetPlayerManagerComponent();
+                        if (PM)
+                        {
+                            GearItem Gi = PM.m_ItemInHands;
+                            string HoldingGear = Gi ? Gi.name : "";
+                            if (m_LocalPlayerData.m_GearName != HoldingGear)
+                            {
+                                m_LocalPlayerData.m_GearName = HoldingGear;
+                                ClientSend.SendHoldingGear(HoldingGear, m_LocalPlayerData.m_GearVariant);
+                            }
+                            if (m_LocalPlayerData.m_LastSentCrouch != PM.PlayerIsCrouched())
+                            {
+                                m_LocalPlayerData.m_LastSentCrouch = PM.PlayerIsCrouched();
+                                ClientSend.SendCrouch(m_LocalPlayerData.m_LastSentCrouch);
+                            }
+                            Comps.NetworkPlayer.Actions Action = GetCurrentAction();
+                            if(m_LocalPlayerData.m_LastSentAction != Action)
+                            {
+                                m_LocalPlayerData.m_LastSentAction = Action;
+                                ClientSend.SendAction((int)Action);
+                            }
                         }
                     }
                 }

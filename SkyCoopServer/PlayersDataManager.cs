@@ -1,15 +1,19 @@
-﻿using System;
+﻿using LiteNetLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace SkyCoopServer
 {
     public class PlayersDataManager
     {
         public List<DataStr.PlayerData> m_Players = new List<DataStr.PlayerData>();
+
+        public bool m_RecursiveDebug = true;
 
         private Server s_Server;
 
@@ -64,7 +68,7 @@ namespace SkyCoopServer
 
                         foreach (DataStr.PlayerData OnScenePlayer in Players)
                         {
-                            if(OnScenePlayer.m_PlayerID != Player.m_PlayerID)
+                            if(OnScenePlayer.m_PlayerID != Player.m_PlayerID || m_RecursiveDebug)
                             {
                                 ServerSend.SendPosition(s_Server.GetClient(OnScenePlayer.m_PlayerID), Position, Player.m_PlayerID);
                             }
@@ -89,7 +93,7 @@ namespace SkyCoopServer
 
                         foreach (DataStr.PlayerData OnScenePlayer in Players)
                         {
-                            if (OnScenePlayer.m_PlayerID != Player.m_PlayerID)
+                            if (OnScenePlayer.m_PlayerID != Player.m_PlayerID || m_RecursiveDebug)
                             {
                                 ServerSend.SendRotation(s_Server.GetClient(OnScenePlayer.m_PlayerID), Rotation, Player.m_PlayerID);
                             }
@@ -98,6 +102,60 @@ namespace SkyCoopServer
                 }
             }
         }
+
+        public void SceneAlign()
+        {
+            Console.WriteLine("SceneAlign");
+            List<int> PlayerIndexes = s_Server.GetClientsIndexs();
+
+            foreach (int PlayerID in PlayerIndexes)
+            {
+                DataStr.PlayerData Player = GetPlayer(PlayerID);
+                foreach (int OtherPlayerID in PlayerIndexes)
+                {
+                    if (OtherPlayerID != PlayerID || m_RecursiveDebug)
+                    {
+                        DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
+
+                        NetPeer OtherPlayerClient = s_Server.GetClient(OtherPlayerID);
+                        NetPeer PlayerClient = s_Server.GetClient(PlayerID);
+
+                        ServerSend.SendPlayerSceneNotification(OtherPlayerClient, OtherPlayer.m_Scene == Player.m_Scene, PlayerID);
+                        ServerSend.SendPlayerSceneNotification(PlayerClient, OtherPlayer.m_Scene == Player.m_Scene, OtherPlayerID);
+                    }
+                }
+            }
+        }
+
+        public void PlayerChangeGear(int Index, string GearName, int GearVariant, bool Broadcast = true)
+        {
+            DataStr.PlayerData Player = GetPlayer(Index);
+            if (Player != null)
+            {
+                Player.m_VisualData.m_GearInHands = GearName;
+                Player.m_VisualData.m_GearVariant = GearVariant;
+
+                if (Broadcast)
+                {
+                    if (s_Server != null)
+                    {
+                        foreach (int OtherPlayerID in s_Server.GetClientsIndexs())
+                        {
+                            if (OtherPlayerID != Index || m_RecursiveDebug)
+                            {
+                                DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
+
+                                if(OtherPlayer.m_Scene == Player.m_Scene)
+                                {
+                                    ServerSend.SendPlayerChangeGear(s_Server.GetClient(OtherPlayerID), GearName, GearVariant, Index);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public void PlayerChangeScene(int Index, string Scene, bool Broadcast = true)
         {
             DataStr.PlayerData Player = GetPlayer(Index);
@@ -109,23 +167,90 @@ namespace SkyCoopServer
                 {
                     if (s_Server != null)
                     {
-                        
-                        // Notify all other clients if this player enters/leaves scene that client is on aswell.
-                        // For example Client1 and Client2 on Scene A, and Client3 on scene B, and Client4 on scene C.
-                        // When Client1 going to scene B.
-                        // Client2 will recive client1 Left Scene message.
-                        // Client3 will recive client1 Enter Scene message.
-                        // Client4 will recive NOTHING.
-                        foreach (DataStr.PlayerData OtherPlayer in m_Players)
+                        foreach (int OtherPlayerID in s_Server.GetClientsIndexs())
                         {
-                            if(OtherPlayer.m_Scene != "")
+                            if(OtherPlayerID != Index || m_RecursiveDebug)
                             {
-                                if (OtherPlayer.m_PlayerID != Player.m_PlayerID)
+                                DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
+                                ServerSend.SendPlayerSceneNotification(s_Server.GetClient(OtherPlayerID), OtherPlayer.m_Scene == Player.m_Scene, Index);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        public void PlayerChangeCrouch(int Index, bool CrouchState, bool Broadcast = true)
+        {
+            DataStr.PlayerData Player = GetPlayer(Index);
+            if (Player != null)
+            {
+                Player.m_VisualData.m_Crouch = CrouchState;
+
+                if (Broadcast)
+                {
+                    if (s_Server != null)
+                    {
+                        foreach (int OtherPlayerID in s_Server.GetClientsIndexs())
+                        {
+                            if (OtherPlayerID != Index || m_RecursiveDebug)
+                            {
+                                DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
+
+                                if (OtherPlayer.m_Scene == Player.m_Scene)
                                 {
-                                    ServerSend.SendPlayerSceneNotification(
-                                        s_Server.GetClient(OtherPlayer.m_PlayerID),
-                                        OtherPlayer.m_Scene == Player.m_Scene,
-                                        Player.m_PlayerID);
+                                    ServerSend.SendPlayerCrouch(s_Server.GetClient(OtherPlayerID), CrouchState, Index);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        public void PlayerChangeAction(int Index, int Action, bool Broadcast = true)
+        {
+            DataStr.PlayerData Player = GetPlayer(Index);
+            if (Player != null)
+            {
+                Player.m_VisualData.m_LatAction = Action;
+
+                if (Broadcast)
+                {
+                    if (s_Server != null)
+                    {
+                        foreach (int OtherPlayerID in s_Server.GetClientsIndexs())
+                        {
+                            if (OtherPlayerID != Index || m_RecursiveDebug)
+                            {
+                                DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
+
+                                if (OtherPlayer.m_Scene == Player.m_Scene)
+                                {
+                                    ServerSend.SendPlayerAction(s_Server.GetClient(OtherPlayerID), Action, Index);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        public void PlayerFire(int Index, bool Broadcast = true)
+        {
+            DataStr.PlayerData Player = GetPlayer(Index);
+            if (Player != null)
+            {
+                if (Broadcast)
+                {
+                    if (s_Server != null)
+                    {
+                        foreach (int OtherPlayerID in s_Server.GetClientsIndexs())
+                        {
+                            if (OtherPlayerID != Index || m_RecursiveDebug)
+                            {
+                                DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
+
+                                if (OtherPlayer.m_Scene == Player.m_Scene)
+                                {
+                                    ServerSend.SendPlayerFire(s_Server.GetClient(OtherPlayerID), Index);
                                 }
                             }
                         }

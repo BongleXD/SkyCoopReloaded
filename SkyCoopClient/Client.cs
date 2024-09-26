@@ -4,6 +4,7 @@ using MelonLoader;
 using System.Net;
 using SkyCoopServer;
 using MonoMod.Utils;
+using UnityEngine;
 
 namespace SkyCoop
 {
@@ -21,6 +22,10 @@ namespace SkyCoop
             { (int)Packet.Type.ClientPosition, ClientHandle.ClientPosition },
             { (int)Packet.Type.ClientRotation, ClientHandle.ClientRotation },
             { (int)Packet.Type.ClientScene, ClientHandle.ClientSceneNotification },
+            { (int)Packet.Type.ClientHoldigGear, ClientHandle.ClientHoldingGear },
+            { (int)Packet.Type.ClientCrouch, ClientHandle.ClientCrouch },
+            { (int)Packet.Type.ClientAction, ClientHandle.ClientAction },
+            { (int)Packet.Type.ClientFire, ClientHandle.ClientFire },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

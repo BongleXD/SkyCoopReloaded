@@ -16,8 +16,7 @@ namespace SkyCoop
     {
         public static void Welcome(NetDataReader Reader)
         {
-            int MessageLength = Reader.GetInt();
-            string Message = Reader.GetString(MessageLength);
+            string Message = Reader.ReadString();
             Logger.Log(ConsoleColor.Cyan,"Server welcomes me with message: "+ Message);
             ClientSend.Welcome();
             MenuHook.RemovePleaseWait();
@@ -29,8 +28,8 @@ namespace SkyCoop
         {
             int PlayersMax = Reader.GetInt();
             int Seed = Reader.GetInt();
-            string StartingRegion = Reader.GetString(Reader.GetInt());
-            string GameMode = Reader.GetString(Reader.GetInt());
+            string StartingRegion = Reader.ReadString();
+            string GameMode = Reader.ReadString();
 
             PlayersManager.InitilizePlayers(PlayersMax);
 
@@ -48,9 +47,7 @@ namespace SkyCoop
         public static void ClientPosition(NetDataReader Reader)
         {
             int PlayerID = Reader.GetInt();
-            Vector3 Position = new Vector3(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
-
-            //Logger.Log("(ClientPosition) Player ID " + PlayerID + Position.ToString());
+            Vector3 Position = Reader.ReadVector3Unity();
 
             Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
             if(Player)
@@ -62,9 +59,7 @@ namespace SkyCoop
         public static void ClientRotation(NetDataReader Reader)
         {
             int PlayerID = Reader.GetInt();
-            Quaternion Rotation = new Quaternion(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
-
-            //Logger.Log("(ClientRotation) Player ID " + PlayerID + Rotation.ToString());
+            Quaternion Rotation = Reader.ReadQuaternionUnity();
 
             Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
             if (Player)
@@ -78,11 +73,11 @@ namespace SkyCoop
             int PlayerID = Reader.GetInt();
             bool Present = Reader.GetBool();
 
-            Logger.Log("(ClientSceneNotification) Player ID "+PlayerID+" Visible "+ Present);
-
             Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
             if (Player)
             {
+                bool PreviousState = Player.gameObject.activeSelf;
+                
                 if (Present)
                 {
                     Player.KeepVisible();
@@ -90,6 +85,52 @@ namespace SkyCoop
                 {
                     Player.gameObject.SetActive(false);
                 }
+
+                if(Present != PreviousState)
+                {
+                    Logger.Log("(ClientSceneNotification) Player ID " + PlayerID + " Visible " + Present);
+                }
+            }
+        }
+        public static void ClientHoldingGear(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            string GearName = Reader.ReadString();
+            int GearVariant = Reader.GetInt();
+            Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
+            if (Player)
+            {
+                Player.SetGear(GearName, GearVariant);
+            }
+        }
+
+        public static void ClientCrouch(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            bool IsCrouching = Reader.GetBool();
+            Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
+            if (Player)
+            {
+                Player.SetCrouching(IsCrouching);
+            }
+        }
+        public static void ClientAction(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            int Action = Reader.GetInt();
+            Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
+            if (Player)
+            {
+                Player.SetAcation(Action);
+            }
+        }
+        public static void ClientFire(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
+            if (Player)
+            {
+                Player.DoFire();
             }
         }
     }

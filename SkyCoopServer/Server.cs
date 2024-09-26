@@ -23,6 +23,10 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientPosition, ServerHandle.ClientPosition },
             { (int)Packet.Type.ClientRotation, ServerHandle.ClientRotation },
             { (int)Packet.Type.ClientScene, ServerHandle.ClientScene },
+            { (int)Packet.Type.ClientHoldigGear, ServerHandle.ClientHoldingGear },
+            { (int)Packet.Type.ClientCrouch, ServerHandle.ClientCrouch },
+            { (int)Packet.Type.ClientAction, ServerHandle.ClientAction },
+            { (int)Packet.Type.ClientFire, ServerHandle.ClientFire },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
@@ -44,6 +48,21 @@ namespace SkyCoopServer
 
             // Data Sync Instances
             m_PlayersData = new PlayersDataManager(this);
+
+            Timer timer1 = new Timer(EverySecond, null, 1000, 1000);
+        }
+
+        public List<int> GetClientsIndexs()
+        {
+            List<int> Indexes = new List<int>();
+            if (m_Instance != null)
+            {
+                foreach (NetPeer Peer in m_Instance.ConnectedPeerList)
+                {
+                    Indexes.Add(Peer.Id);
+                }
+            }
+            return Indexes;
         }
 
         public NetPeer GetClient(int Index)
@@ -66,6 +85,14 @@ namespace SkyCoopServer
             if (m_Instance != null && m_IsReady)
             {
                 m_Instance.PollEvents();
+            }
+        }
+
+        public void EverySecond(object obj)
+        {
+            if (m_PlayersData != null)
+            {
+                m_PlayersData.SceneAlign();
             }
         }
 

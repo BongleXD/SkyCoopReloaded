@@ -5,8 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SkyCoopServer;
-using static Il2CppParadoxNotion.Services.Logger;
 using UnityEngine;
+using static SkyCoopServer.Packet;
+using Il2Cpp;
 
 namespace SkyCoop
 {
@@ -27,8 +28,7 @@ namespace SkyCoop
             string Message = "I am connected!";
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.Welcome);
-            writer.Put(Message.Length);
-            writer.Put(Message);
+            writer.Write(Message);
             SendToHost(writer);
         }
 
@@ -36,9 +36,7 @@ namespace SkyCoop
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientPosition);
-            writer.Put(Position.x);
-            writer.Put(Position.y);
-            writer.Put(Position.z);
+            writer.Write(Position);
             SendToHost(writer);
         }
 
@@ -47,10 +45,7 @@ namespace SkyCoop
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.ClientRotation);
-            writer.Put(Rotation.x);
-            writer.Put(Rotation.y);
-            writer.Put(Rotation.z);
-            writer.Put(Rotation.w);
+            writer.Write(Rotation);
             SendToHost(writer);
         }
 
@@ -58,16 +53,40 @@ namespace SkyCoop
         {
             NetDataWriter writer = new NetDataWriter();
 
-            if(Scene == null)
-            {
-                Logger.Log(ConsoleColor.DarkMagenta,"SendScene is null WHAT THE FUCK? ");
-            }
-
-            Logger.Log("SendScene "+ Scene);
-
             writer.Put((int)Packet.Type.ClientScene);
-            writer.Put(Scene.Length);
-            writer.Put(Scene);
+            writer.Write(Scene);
+
+            SendToHost(writer);
+        }
+
+        public static void SendHoldingGear(string GearName, int GearVariant)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientHoldigGear);
+            writer.Write(GearName);
+            writer.Put(GearVariant);
+            SendToHost(writer);
+        }
+
+        public static void SendCrouch(bool Crouch)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientCrouch);
+            writer.Put(Crouch);
+            SendToHost(writer);
+        }
+        public static void SendAction(int Action)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientAction);
+            writer.Put(Action);
+            SendToHost(writer);
+        }
+        public static void SendFire()
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientFire);
             SendToHost(writer);
         }
     }

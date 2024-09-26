@@ -235,7 +235,7 @@ namespace SkyCoop
         {
             private static bool Prefix(UIButton __instance)
             {
-                Logger.Log("UIButton OnClick");
+                //Logger.Log("UIButton OnClick");
                 if (__instance.gameObject != null && __instance.gameObject.GetComponent<Comps.UiButtonPressHook>() != null)
                 {
                     Comps.UiButtonPressHook Hook = __instance.gameObject.GetComponent<Comps.UiButtonPressHook>();
@@ -568,6 +568,39 @@ namespace SkyCoop
         {
             ChangeMenuItems("Original");
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+        }
+
+        //TODO: Move it to different class
+        [HarmonyLib.HarmonyPatch(typeof(vp_FPSShooter), "Fire", null)]
+        public class vp_FPSShooter_Fire
+        {
+            public static void Prefix(vp_FPSShooter __instance)
+            {
+                if (__instance.m_Weapon == null || (double)Time.time < (double)__instance.m_NextAllowedFireTime || (__instance.m_Weapon.ReloadInProgress() || !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(__instance.m_Weapon.m_GunItem.m_AllowHipFire)) || GameManager.GetPlayerAnimationComponent().IsReloading())
+                {
+                    return;
+                }
+                if (__instance.m_Weapon.GetAmmoCount() < 1)
+                {
+                    //TODO: Dry fire sound sync
+                    //SendMultiplayerAudio("PLAY_RIFLE_DRY_3D");
+                    return;
+                } else
+                {
+                    if (__instance.m_Weapon.m_GunItem.m_IsJammed)
+                    {
+                        //TODO: Jammed sound sync
+                        //SendMultiplayerAudio("PLAY_RIFLE_DRY_3D");
+                        return;
+                    }
+                }
+
+                //TODO: Projectile fire sync
+                if (__instance.ProjectilePrefab.name == "PistolBullet")
+                {
+                    ClientSend.SendFire();
+                }
+            }
         }
     }
 }

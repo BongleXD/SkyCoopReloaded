@@ -19,7 +19,8 @@ namespace SkyCoopServer
         public class PlayerData
         {
             public int m_PlayerID = 0;
-            
+            public PlayerVisualData m_VisualData = new PlayerVisualData();
+
             public Vector3 m_Position = new Vector3(0, 0, 0);
             public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
 
@@ -29,6 +30,14 @@ namespace SkyCoopServer
             {
                 m_PlayerID = PlayerID;
             }
+        }
+
+        public class PlayerVisualData
+        {
+            public bool m_Crouch = false;
+            public string m_GearInHands = "";
+            public int m_GearVariant = 0;
+            public int m_LatAction = 0;
         }
     }
 }

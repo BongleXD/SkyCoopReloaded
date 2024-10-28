@@ -129,16 +129,9 @@ public class MenuHook
 
         if (mode == "Multiplayer")
         {
-            OverrideMenuButton(Grid, 1, "HOST SERVER");
-            OverrideMenuButton(Grid, 2, "JOIN SERVER");
-            OverrideMenuButton(Grid, 3, "OPTIONS");
-        }
-        else if (mode == "MultiProfileSettings")
-        {
-            OverrideMenuButton(Grid, 1, "CHANGE NAME");
-            OverrideMenuButton(Grid, 2, "CUSTOMIZATION");
-            OverrideMenuButton(Grid, 3, "COPY ID");
-            OverrideMenuButton(Grid, 4, "GAME SETTINGS");
+            OverrideMenuButton(Grid, 0, "创建房间");
+            OverrideMenuButton(Grid, 1, "加入房间");
+            OverrideMenuButton(Grid, 2, "选项");
         }
     }
 
@@ -201,18 +194,18 @@ public class MenuHook
 
     internal static GameObject CreateSkyCoopSettingsTab(Panel_OptionsMenu panel)
     {
-        var tab = CreateSettingTabTemplate(panel, "SkyCoopSettings", "MULTIPLAYER");
+        var tab = CreateSettingTabTemplate(panel, "SkyCoopSettings", "多人游戏");
 
 
         if (tab.transform.GetChild(1))
             for (var i = tab.transform.GetChild(1).childCount - 1; i >= 0; i--)
                 Object.Destroy(tab.transform.GetChild(1).GetChild(i).gameObject);
 
-        AddSetting("SkyCoopSettings", "Nickname", "", UIPrefabs.TextEntryPrefab, "Nickname", "Label");
-        AddSetting("SkyCoopSettings", "Voice Key", "", UIPrefabs.KeyEntryPrefab, "VoiceKey", "Label");
-        AddSetting("SkyCoopSettings", "Emotions Key", "", UIPrefabs.KeyEntryPrefab, "EmoteKey", "Label");
-        AddSetting("SkyCoopSettings", "Chat Key", "", UIPrefabs.KeyEntryPrefab, "ChatKey", "Label");
-        AddSetting("SkyCoopSettings", "Equip Melee Weapon", "", UIPrefabs.KeyEntryPrefab, "MeleeKey", "Label");
+        AddSetting("SkyCoopSettings", "更换昵称", "", UIPrefabs.TextEntryPrefab, "Nickname", "Label");
+        AddSetting("SkyCoopSettings", "语音按键", "", UIPrefabs.KeyEntryPrefab, "VoiceKey", "Label");
+        AddSetting("SkyCoopSettings", "表情按键", "", UIPrefabs.KeyEntryPrefab, "EmoteKey", "Label");
+        AddSetting("SkyCoopSettings", "聊天按键", "", UIPrefabs.KeyEntryPrefab, "ChatKey", "Label");
+        AddSetting("SkyCoopSettings", "装备近战武器按键", "", UIPrefabs.KeyEntryPrefab, "MeleeKey", "Label");
         return tab;
     }
 
@@ -330,7 +323,7 @@ public class MenuHook
 
                 if (Hook.m_PanelHandle == "Panel_MainMenu")
                 {
-                    if (Hook.m_CustomId == 3) // MULTIPLAYER MAIN MENU
+                    if (Hook.m_CustomId == 2) // MULTIPLAYER MAIN MENU
                     {
                         ChangeMenuItems("Multiplayer");
                         InterfaceManager.TrySetPanelEnabled<Panel_MainMenu>(false);
@@ -340,12 +333,12 @@ public class MenuHook
                 {
                     if (s_CurrenetMenuOverride == "Multiplayer")
                     {
-                        if (Hook.m_CustomId == 1) // Host server
+                        if (Hook.m_CustomId == 0) // Host server
                         {
                             if (ModMain.Server.m_IsReady)
                             {
                                 RemovePleaseWait();
-                                DoOKMessage("Server already up!", "You already hosting server!");
+                                DoOKMessage("房间在运行中!", "你已经创建了一个房间!");
                             }
                             else
                             {
@@ -355,22 +348,22 @@ public class MenuHook
                                 OpenSandbox();
                             }
                         }
-                        else if (Hook.m_CustomId == 2) // Join server
+                        else if (Hook.m_CustomId == 1) // Join server
                         {
                             if (ModMain.Client.m_IsReady)
                             {
                                 RemovePleaseWait();
-                                DoOKMessage("", "You already connected to the server!");
+                                DoOKMessage("", "你已经连接至该服务器!");
                             }
                             else
                             {
                                 InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(
-                                    Panel_Confirmation.ConfirmationType.Rename, "INPUT SERVER ADDRESS", "127.0.0.1",
-                                    Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel",
+                                    Panel_Confirmation.ConfirmationType.Rename, "输入远程房间网络地址", "127.0.0.1",
+                                    Panel_Confirmation.ButtonLayout.Button_2, "连接", "GAMEPLAY_Cancel",
                                     Panel_Confirmation.Background.Transperent, null, null);
                             }
                         }
-                        else if (Hook.m_CustomId == 3)
+                        else if (Hook.m_CustomId == 2)
                         {
                             var Panel = InterfaceManager.GetPanel<Panel_Sandbox>();
                             Panel.OnClickOptions();

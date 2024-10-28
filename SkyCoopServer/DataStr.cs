@@ -9,7 +9,7 @@ public class DataStr
         public string m_GameMode = "Stalker";
         public int m_MaxPlayers = 4;
         public int m_Seed = 777777;
-        public string m_StartingRegion = "ForlornMuskeg";
+        public string m_StartingRegion = "MysteryLake";
     }
 
     public class PlayerData

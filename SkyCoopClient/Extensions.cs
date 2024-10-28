@@ -1,40 +1,34 @@
 ﻿using LiteNetLib.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
-namespace SkyCoop
+namespace SkyCoop;
+
+public static class Extensions
 {
-    public static class Extensions
+    public static void Write(this NetDataWriter Writer, Quaternion quat)
     {
-        public static void Write(this NetDataWriter Writer, Quaternion quat)
-        {
-            Writer.Put(quat.x);
-            Writer.Put(quat.y);
-            Writer.Put(quat.z);
-            Writer.Put(quat.w);
-        }
+        Writer.Put(quat.x);
+        Writer.Put(quat.y);
+        Writer.Put(quat.z);
+        Writer.Put(quat.w);
+    }
 
-        public static void Write(this NetDataWriter Writer, Vector3 v3)
-        {
-            Writer.Put(v3.x);
-            Writer.Put(v3.y);
-            Writer.Put(v3.z);
-        }
+    public static void Write(this NetDataWriter Writer, Vector3 v3)
+    {
+        Writer.Put(v3.x);
+        Writer.Put(v3.y);
+        Writer.Put(v3.z);
+    }
 
-        public static Vector3 ReadVector3Unity(this NetDataReader Reader)
-        {
-            Vector3 v3 = new Vector3(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
-            return v3;
-        }
+    public static Vector3 ReadVector3Unity(this NetDataReader Reader)
+    {
+        var v3 = new Vector3(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
+        return v3;
+    }
 
-        public static Quaternion ReadQuaternionUnity(this NetDataReader Reader)
-        {
-            Quaternion quat = new Quaternion(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
-            return quat;
-        }
+    public static Quaternion ReadQuaternionUnity(this NetDataReader Reader)
+    {
+        var quat = new Quaternion(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
+        return quat;
     }
 }

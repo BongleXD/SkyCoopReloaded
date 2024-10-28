@@ -5,140 +5,116 @@ using MelonLoader;
 using SkyCoopServer;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using Object = UnityEngine.Object;
 
-namespace SkyCoop
+namespace SkyCoop;
+
+internal sealed class ModMain : MelonMod
 {
-    internal sealed class ModMain : MelonMod
+    public static Server Server;
+    public static Client Client;
+
+    public override void OnInitializeMelon()
     {
-        public static Server Server;
-        public static Client Client;
+        Server = new Server();
+        Client = new Client();
+    }
 
-        public override void OnInitializeMelon()
+    public static void SetAppBackgroundMode()
+    {
+        if (Application.runInBackground == false) Application.runInBackground = true; // Always running in bg
+    }
+
+    [Obsolete]
+    public override void OnApplicationStart()
+    {
+        Comps.RegisterComponents();
+        AssetManager.PreloadMainBundle();
+        //AssetManager.DumpPrefabsList();
+    }
+
+    public static void OnGameBoot()
+    {
+        ReimplementConsole();
+        //AssetManager.DumpAddressablesContent();
+    }
+
+    public override void OnUpdate()
+    {
+        SetAppBackgroundMode();
+        if (Client != null && Client.m_Instance != null)
         {
-            Server = new Server();
-            Client = new Client();
+            Client.m_Instance.PollEvents();
+
+            if (Client.m_IsReady) PlayersManager.UpdateLocalPlayer();
         }
 
-        public static void SetAppBackgroundMode()
+        if (Server != null && Server.m_IsReady) Server.Update();
+    }
+
+    public static void ReimplementConsole()
+    {
+        if (uConsole.m_Instance == null)
         {
-            if (Application.runInBackground == false)
+            Logger.Log("No uConsole present, creating one.");
+            var ConsoleReference = Addressables.LoadAssetAsync<GameObject>("uConsole").WaitForCompletion();
+            if (ConsoleReference != null)
             {
-                Application.runInBackground = true; // Always running in bg
+                var ConsoleObj = Object.Instantiate(ConsoleReference);
+                if (ConsoleObj)
+                    uConsole.m_Instance = ConsoleObj.GetComponent<uConsole>();
+                else
+                    Logger.Log(System.ConsoleColor.Red, "Can't assign uConsole!");
+            }
+            else
+            {
+                Logger.Log(System.ConsoleColor.Red, "Can't load uConsole!");
             }
         }
+    }
 
-        [Obsolete]
-        public override void OnApplicationStart()
+    public static string GetCurrentSceneName()
+    {
+        if (GameManager.m_SceneTransitionData != null)
         {
-            Comps.RegisterComponents();
-            AssetManager.PreloadMainBundle();
-            //AssetManager.DumpPrefabsList();
+            if (string.IsNullOrEmpty(GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent)) return "Empty";
+            return GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
         }
 
-        public static void OnGameBoot()
-        {
-            ReimplementConsole();
-            //AssetManager.DumpAddressablesContent();
-        }
+        return "Empty";
+    }
 
-        public override void OnUpdate()
-        {
-            SetAppBackgroundMode();
-            if (Client != null && Client.m_Instance != null)
+    public static bool IsGameplayScene(string Scene = "")
+    {
+        if (Scene == "") Scene = GetCurrentSceneName();
+        if (Scene == "Empty" || Scene == "Boot" || Scene == "MainMenu") return false;
+        return true;
+    }
+
+    public static void SetupSurvivalSettings(string GameMode, int Seed, string Region)
+    {
+        var EMM = GameManager.GetExperienceModeManagerComponent();
+        GameModeConfig SelectedMode = null;
+        RegionSpecification SelectedRegion = null;
+        foreach (var Mode in EMM.m_AvailableGameModes)
+            if (GameMode == Mode.name)
             {
-                Client.m_Instance.PollEvents();
-
-                if(Client.m_IsReady)
-                {
-                    PlayersManager.UpdateLocalPlayer();
-                }
+                SelectedMode = Mode;
+                break;
             }
 
-            if(Server != null && Server.m_IsReady)
-            {
-                Server.Update();
-            }
-        }
+        var Panel_Regions = InterfaceManager.GetPanel<Panel_SelectRegion_Map>();
 
-        public static void ReimplementConsole()
-        {
-            if (uConsole.m_Instance == null)
+        foreach (var R in Panel_Regions.m_Items)
+            if (R.name == Region)
             {
-                Logger.Log("No uConsole present, creating one.");
-                GameObject ConsoleReference = Addressables.LoadAssetAsync<GameObject>("uConsole").WaitForCompletion();
-                if (ConsoleReference != null)
-                {
-                    GameObject ConsoleObj = UnityEngine.Object.Instantiate(ConsoleReference);
-                    if (ConsoleObj)
-                    {
-                        uConsole.m_Instance = ConsoleObj.GetComponent<uConsole>();
-                    } else
-                    {
-                        Logger.Log(System.ConsoleColor.Red, "Can't assign uConsole!");
-                    }
-                } else
-                {
-                    Logger.Log(System.ConsoleColor.Red, "Can't load uConsole!");
-                }
-            }
-        }
-
-        public static string GetCurrentSceneName()
-        {
-            if (GameManager.m_SceneTransitionData != null)
-            {
-                if (string.IsNullOrEmpty(GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent))
-                {
-                    return "Empty";
-                }
-                return GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
+                SelectedRegion = R.m_RegionSpec;
+                break;
             }
 
-            return "Empty";
-        }
-
-        public static bool IsGameplayScene(string Scene = "")
-        {
-            if(Scene == "")
-            {
-                Scene = GetCurrentSceneName();
-            }
-            if(Scene == "Empty" || Scene == "Boot" || Scene == "MainMenu")
-            {
-                return false;
-            }
-            return true;
-        }
-
-        public static void SetupSurvivalSettings(string GameMode, int Seed, string Region)
-        {
-            ExperienceModeManager EMM = GameManager.GetExperienceModeManagerComponent();
-            GameModeConfig SelectedMode = null;
-            RegionSpecification SelectedRegion = null;
-            foreach (GameModeConfig Mode in EMM.m_AvailableGameModes)
-            {
-                if(GameMode == Mode.name)
-                {
-                    SelectedMode = Mode;
-                    break;
-                }
-            }
-
-            Panel_SelectRegion_Map Panel_Regions = InterfaceManager.GetPanel<Panel_SelectRegion_Map>();
-
-            foreach (SelectRegionItem R in Panel_Regions.m_Items)
-            {
-                if(R.name == Region)
-                {
-                    SelectedRegion = R.m_RegionSpec;
-                    break;
-                }
-            }
-
-            EMM.SetGameModeConfig(SelectedMode);
-            GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
-            GameManager.m_StartRegion = SelectedRegion;
-            GameManager.m_Instance.LaunchSandbox();
-        }
+        EMM.SetGameModeConfig(SelectedMode);
+        GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
+        GameManager.m_StartRegion = SelectedRegion;
+        GameManager.m_Instance.LaunchSandbox();
     }
 }

@@ -10,6 +10,7 @@ public class MenuHook
 {
     // Honorably stolen from Mod Settings
     private const int SKY_COOP_SETTINGS_ID = 0x5343; // "SC" in hex
+    private static string _connectServerIp = "127.0.0.1";
     public static string s_CurrenetMenuOverride = "Original";
     public static Dictionary<string, SettingTab> s_CustomSettings = new();
 
@@ -358,7 +359,7 @@ public class MenuHook
                             else
                             {
                                 InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(
-                                    Panel_Confirmation.ConfirmationType.Rename, "输入远程房间网络地址", "127.0.0.1",
+                                    Panel_Confirmation.ConfirmationType.Rename, "输入远程房间网络地址", _connectServerIp,
                                     Panel_Confirmation.ButtonLayout.Button_2, "连接", "GAMEPLAY_Cancel",
                                     Panel_Confirmation.Background.Transperent, null, null);
                             }
@@ -464,7 +465,8 @@ public class MenuHook
                     "__instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text " + Message);
                 switch (Message)
                 {
-                    case "INPUT SERVER ADDRESS":
+                    case "输入远程房间网络地址":
+                        _connectServerIp = text;
                         ModMain.Client.ConnectToServer(text);
                         break;
                 }
